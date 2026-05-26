@@ -1,6 +1,6 @@
 # TheAlgorithms - Sa Implementation
 
-This directory contains the 100% complete implementation of core data structures and algorithms in the **Sa (Symbolic Affine)** language. Sa is a next-generation system-level assembly language characterized by linear ownership, zero runtime overhead, and an LLM-friendly flat control flow.
+This directory contains the 100% complete implementation of core data structures and algorithms in the **Sa (Safe Assembly)** language. Sa is a next-generation system-level assembly language characterized by linear ownership, zero runtime overhead, and an LLM-friendly flat control flow.
 
 ## 🚀 Key Features of Sa Version
 - **Linear Ownership**: Strict compile-time memory safety without GC. Every register must be explicitly released (`!`) or moved (`^`).
