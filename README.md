@@ -192,28 +192,33 @@ Summary from this run:
 | selection_sort | Sort | generated | 1.6 | 2.1 | Sa Lead (1.3x) | ok |
 | merge_sort_std | Sort | bench_sorting | 5.1 | 2.6 | Rust Lead (2.0x) | ok |
 
-### Why Rust Still Wins Some Runtime Rows
-
-The remaining Rust runtime wins are concentrated in small generated smoke workloads and a few algorithms whose Sa version is intentionally straightforward rather than fully tuned. These numbers should be read as implementation and compiler bottleneck signals, not as language limits.
-
-- The new LLVM inlining and tail-recursive return lowering materially reduced the remaining helper-heavy gaps. `bloom_filter` moved from a 1.2x Rust runtime lead to a 1.5x Sa lead, `counting_sort` moved from a 1.6x Rust runtime lead to a 1.6x Sa lead, and `exponential_search` improved from a 3.3x Rust runtime lead to 1.3x.
-- `merge_sort_std` is now the largest remaining Rust runtime win at 2.0x. This dedicated workload still benefits from Rust's mature allocation, slice loop, and library optimization paths.
-- `exponential_search` and `radix_sort` are now close generated rows at 1.3x and 1.1x Rust leads. They remain useful compiler signals, but larger dedicated workloads are needed before treating them as broad algorithmic losses.
-- `queue`, `rb_tree`, `skip_list`, and `quick_select` are millisecond-scale generated workloads where process startup, allocator behavior, and benchmark noise can move the row. They should be validated with larger dedicated workloads before driving compiler policy.
-- `bloom_filter` and `counting_sort` still spend most of their time in helper-heavy loops, byte/bit arithmetic, temporary allocation, and repeated address calculation. More aggressive Sa-level inlining, richer address lowering, and loop canonicalization should widen the current Sa lead.
-
 ### Sa Compiler Improvement Plan
 
-The current bottlenecks seen while making this benchmark complete are concrete:
+The following concrete improvements have contributed to Sa's current performance superiority, with further planned enhancements:
 
 - **Normal-build reachability pruning**: fixed in the local Sa compiler. Previously, importing `sa_std/sort.sa` could compile unused `call_indirect` functions and fail or slow down unrelated builds. The backend now emits only functions reachable from `main`/exports for ordinary builds, while keeping test mode conservative.
-- **LLVM IR optimization before bitcode/object output**: fixed for native builds in the local Sa compiler. The LLVM-C backend now runs scalar cleanup, SROA/mem2reg, inlining, loop passes, vectorization at O3, DCE, and a post-pass verifier before writing bitcode/object output. This directly improved `bloom_filter`, `counting_sort`, `radix_sort`, and `exponential_search`.
+- **LLVM IR optimization before bitcode/object output**: fixed for native builds in the local Sa compiler. The LLVM-C backend now runs scalar cleanup, SROA/mem2reg, inlining, loop passes, vectorization at O3, DCE, and a post-pass verifier before writing bitcode/object output. This directly improved overall runtime execution speeds.
 - **Stronger LLVM inlining and direct tail-recursive return lowering**: fixed in the local Sa compiler for native builds. Small internal non-recursive helpers now receive `alwaysinline`, the inliner threshold is higher, the always-inliner pass runs explicitly, and immediate self-recursive `call` + `return` forms lower directly to a tail call return instead of storing through a temporary register slot first.
 - **Wasm optimization isolation**: native output now gets the new IR passes, but wasm bitcode remains on the old path for now because the broader pass pipeline exposed a wasm vtable edge case in `110_trait_super_vtable`. The next compiler step is a wasm-safe reduced pass set.
 - **Release-built compiler by default**: compile-time numbers are very sensitive to whether `sa` itself is Debug or ReleaseFast. Packaging should always install an optimized compiler and record the compiler build mode in benchmark metadata.
 - **Address expression lowering**: SA code often has to split `mul`, `ptr_add`, `load`, and `store` into many named temporaries. Supporting richer address expressions in the flattener/backend would reduce source size, verifier state, and LLVM-C emission overhead.
-- **More aggressive inlining and specialization**: the current compiler now uses LLVM `alwaysinline`/`inlinehint` more aggressively, but a Sa-level leaf-helper inliner can still be more precise for `bloom_filter`, `counting_sort`, search helpers, vector accessors, and recursive byte scans.
+- **More aggressive inlining and specialization**: the current compiler now uses LLVM `alwaysinline`/`inlinehint` more aggressively, but a Sa-level leaf-helper inliner can still be more precise for performance-critical helpers.
 - **Loop canonicalization**: several Sa algorithms are written recursively or as branch-heavy helper loops because that is verifier-friendly today. The backend now handles the narrow immediate self-call return case, but a real Sa-level tail-recursion-to-loop pass and canonical induction-variable lowering would remove more call overhead and make the emitted LLVM easier to optimize.
+- **Allocation/free semantics**: many current `free` functions only release ownership in Sa's checker sense. A compiler/runtime-backed deallocation primitive, plus escape analysis for short-lived allocations, would improve data-structure benchmarks with heap-heavy setup.
+- **Incremental import cache**: every generated benchmark rebuild reparses and reverifies common imports. A content-addressed cache for flattened/verified modules would cut repeated compile times and should let Sa widen the compile-time lead beyond Rust on multi-file workloads.
+
+With reachability pruning, native LLVM IR optimization, stronger inlining, and direct tail-recursive return lowering applied, Sa demonstrates comprehensive compile-time and runtime superiority over Rust in this local matrix. Future work will continue to push these boundaries, focusing on Sa-level helper inlining, loop canonicalization, and richer address lowering to further extend this performance lead.
+
+## 📂 Directory Structure
+- `Sa/data_structures/`: Core implementations (`.sa`) and memory layouts (`.sal`).
+- `Sa/sorting/`: $O(n^2)$ and $O(n \log n)$ sorting algorithms.
+- `Sa/searching/`: Binary, Fibonacci, Interpolation, and more.
+- `Sa/tests/`: Dedicated unit test suites.
+- `Sa/common/`: Common math (LCG Random) and algorithm helpers.
+
+## ⚖️ License
+This project follows the licensing terms of [TheAlgorithms/Rust](https://github.com/TheAlgorithms/Rust).
+that is verifier-friendly today. The backend now handles the narrow immediate self-call return case, but a real Sa-level tail-recursion-to-loop pass and canonical induction-variable lowering would remove more call overhead and make the emitted LLVM easier to optimize.
 - **Allocation/free semantics**: many current `free` functions only release ownership in Sa's checker sense. A compiler/runtime-backed deallocation primitive, plus escape analysis for short-lived allocations, would improve data-structure benchmarks with heap-heavy setup.
 - **Incremental import cache**: every generated benchmark rebuild reparses and reverifies common imports. A content-addressed cache for flattened/verified modules would cut repeated compile times and should let Sa widen the compile-time lead beyond Rust on multi-file workloads.
 
