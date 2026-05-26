@@ -1,0 +1,9 @@
+#def AVLNode_value = +0
+#def AVLNode_left = +8
+#def AVLNode_right = +16
+#def AVLNode_height = +24
+#def AVLNode_SIZE = 32
+
+#def AVL_root = +0
+#def AVL_len = +8
+#def AVL_SIZE = 16

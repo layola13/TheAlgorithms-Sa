@@ -1,0 +1,9 @@
+#def TreapNode_value = +0
+#def TreapNode_priority = +8
+#def TreapNode_left = +16
+#def TreapNode_right = +24
+#def TreapNode_SIZE = 32
+
+#def Treap_root = +0
+#def Treap_seed = +8
+#def Treap_SIZE = 16

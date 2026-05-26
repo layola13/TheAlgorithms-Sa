@@ -1,0 +1,3 @@
+#def StackUsingSinglyLinkedList_SIZE = 24
+#def StackUsingSinglyLinkedList_head = +0
+#def StackUsingSinglyLinkedList_len = +8

@@ -1,0 +1,75 @@
+@import "../searching/binary_search.sa"
+@import "sa_std/time.sa"
+
+@fill_rec(data: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    store p+0, i as u64
+    one = 1 as u64
+    ni = add i, one
+    call @fill_rec(data, ni, n)
+    !eight
+    !off
+    !p
+    !one
+    !ni
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@search_rec(&slice: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    r = call @sa_binary_search_u64(&slice, i)
+    one = 1 as u64
+    ni = add i, one
+    call @search_rec(&slice, ni, n)
+    !r
+    !one
+    !ni
+    !done
+    !slice
+    return
+L_DONE:
+    !done
+    !slice
+    return
+
+@main() -> i32:
+L_ENTRY:
+    n = 1000000 as u64
+    eight = 8 as u64
+    bytes = mul n, eight
+    data = alloc bytes
+    zero = 0 as u64
+    call @fill_rec(data, zero, n)
+    sl = stack_alloc 16
+    store sl+0, data as ptr
+    store sl+8, n as u64
+    start = call @sa_time_instant_ns()
+    call @search_rec(&sl, zero, n)
+    end = call @sa_time_instant_ns()
+    diff = sub end, start
+    mill = 1000000 as u64
+    res = udiv diff, mill
+    res_i32 = zext res as i32
+    !data
+    !eight
+    !bytes
+    !zero
+    !start
+    !end
+    !diff
+    !mill
+    !res
+    !n
+    return res_i32

@@ -1,0 +1,206 @@
+@import "skip_list.sal"
+
+@sl_zero_node(&node: ptr, i: u64) -> void:
+L_ENTRY:
+    limit = 16 as u64
+    done = eq i, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    off = mul i, 8
+    ptr_off = add off, SkipListNode_forward
+    p_to_fwd = ptr_add node, ptr_off
+    store p_to_fwd+0, 0 as ptr
+    one = 1 as u64
+    next_i = add i, one
+    call @sl_zero_node(&node, next_i)
+    !limit
+    !done
+    !off
+    !ptr_off
+    !p_to_fwd
+    !one
+    !next_i
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@sl_node_new(value: u64) -> ^ptr:
+L_ENTRY:
+    n = alloc SkipListNode_SIZE
+    __addr2 = ptr_add n, SkipListNode_value
+    store __addr2+0, value as u64
+    !__addr2
+    zero = 0 as u64
+    call @sl_zero_node(&n, zero)
+    !zero
+    return n
+
+@export sa_skip_list_new() -> ^ptr:
+L_ENTRY:
+    sl = alloc SkipList_SIZE
+    h = call @sl_node_new(0)
+    __addr2 = ptr_add sl, SkipList_header
+    store __addr2+0, h as ptr
+    !__addr2
+    zero = 0 as i32
+    __addr2 = ptr_add sl, SkipList_level
+    store __addr2+0, zero as i32
+    !__addr2
+    !zero
+    return sl
+
+@sl_search_rec(&curr: ptr, lvl: i32, value: u64) -> i32:
+L_ENTRY:
+    zero = 0 as i32
+    is_neg = slt lvl, zero
+    br is_neg -> L_NOT_FOUND, L_BODY
+L_BODY:
+    i_u64 = sext lvl as u64
+    off = mul i_u64, 8
+    ptr_off = add off, SkipListNode_forward
+    __addr = ptr_add curr, ptr_off
+    next = load __addr+0 as ptr
+    !__addr
+    
+    is_null = eq next, 0
+    br is_null -> L_NEXT_LEVEL, L_CHECK_VAL
+L_CHECK_VAL:
+    __addr = ptr_add next, SkipListNode_value
+    nv = load __addr+0 as u64
+    !__addr
+    is_eq = eq nv, value
+    br is_eq -> L_FOUND, L_CHECK_LT
+L_CHECK_LT:
+    is_lt = ult nv, value
+    br is_lt -> L_MOVE_FORWARD, L_NEXT_LEVEL
+
+L_MOVE_FORWARD:
+    res1 = call @sl_search_rec(&next, lvl, value)
+    !zero
+    !is_neg
+    !i_u64
+    !off
+    !ptr_off
+    !next
+    !is_null
+    !nv
+    !is_eq
+    !is_lt
+    return res1
+
+L_NEXT_LEVEL:
+    one = 1 as i32
+    next_lvl = sub lvl, one
+    res2 = call @sl_search_rec(&curr, next_lvl, value)
+    !zero
+    !is_neg
+    !i_u64
+    !off
+    !ptr_off
+    !next
+    !is_null
+    !one
+    !next_lvl
+    return res2
+
+L_FOUND:
+    !zero
+    !is_neg
+    !i_u64
+    !off
+    !ptr_off
+    !next
+    !is_null
+    !nv
+    !is_eq
+    return 1
+L_NOT_FOUND:
+    !zero
+    !is_neg
+    return 0
+
+@export sa_skip_list_search(&sl: ptr, value: u64) -> i32:
+L_ENTRY:
+    __addr = ptr_add sl, SkipList_header
+    h = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add sl, SkipList_level
+    lvl = load __addr+0 as i32
+    !__addr
+    res = call @sl_search_rec(&h, lvl, value)
+    !h
+    return res
+
+@sl_insert_rec(&curr: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add curr, SkipListNode_forward
+    next = load __addr+0 as ptr
+    !__addr
+    is_null = eq next, 0
+    br is_null -> L_INSERT, L_CHECK
+L_CHECK:
+    __addr = ptr_add next, SkipListNode_value
+    nv = load __addr+0 as u64
+    !__addr
+    is_lt = ult nv, value
+    br is_lt -> L_MOVE, L_INSERT
+L_MOVE:
+    call @sl_insert_rec(&next, value)
+    !next
+    !is_null
+    !nv
+    !is_lt
+    return
+L_INSERT:
+    nn = call @sl_node_new(value)
+    __addr = ptr_add curr, SkipListNode_forward
+    next_now = load __addr+0 as ptr
+    !__addr
+    __addr2 = ptr_add nn, SkipListNode_forward
+    store __addr2+0, next_now as ptr
+    !__addr2
+    __addr2 = ptr_add curr, SkipListNode_forward
+    store __addr2+0, nn as ptr
+    !__addr2
+    !nn
+    !next_now
+    !next
+    !is_null
+    return
+
+@export sa_skip_list_insert(&sl: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add sl, SkipList_header
+    h = load __addr+0 as ptr
+    !__addr
+    call @sl_insert_rec(&h, value)
+    !h
+    return
+
+@sl_node_free_rec(^node: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_DONE, L_BODY
+L_BODY:
+    __addr = ptr_add node, SkipListNode_forward
+    next = load __addr+0 as ptr
+    !__addr
+    call @sl_node_free_rec(^next)
+    !node
+    !is_null
+    return
+L_DONE:
+    !node
+    !is_null
+    return
+
+@export sa_skip_list_free(^sl: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add sl, SkipList_header
+    h = load __addr+0 as ptr
+    !__addr
+    call @sl_node_free_rec(^h)
+    !sl
+    return

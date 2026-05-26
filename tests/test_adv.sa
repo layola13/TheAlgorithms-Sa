@@ -1,0 +1,51 @@
+@import "../data_structures/treap.sa"
+@import "../data_structures/sparse_table.sa"
+@import "../data_structures/lazy_segment_tree.sa"
+
+@test "treap"():
+L_ENTRY:
+    t = call @sa_treap_new(42)
+    call @sa_treap_insert(&t, 10)
+    call @sa_treap_free(^t)
+    return
+
+@test "sparse table"():
+L_ENTRY:
+    data = stack_alloc 16
+    store data+0, 5 as u64
+    store data+8, 2 as u64
+    s = stack_alloc 16
+    store s+Slice_ptr, data as ptr
+    store s+Slice_len, 2 as u64
+    st = call @sa_sparse_table_new(&s)
+    res = call @sa_sparse_table_query(&st, 0, 1)
+    ok = eq res, 2
+    !res
+    call @sa_sparse_table_free(^st)
+    br ok -> L_PASS_ST, L_FAIL_ST
+L_PASS_ST:
+    !ok
+    return
+L_FAIL_ST:
+    !ok
+    panic(103)
+
+@test "lazy seg"():
+L_ENTRY:
+    data = stack_alloc 8
+    store data+0, 10 as u64
+    s = stack_alloc 16
+    store s+Slice_ptr, data as ptr
+    store s+Slice_len, 1 as u64
+    lt = call @sa_lazy_seg_new(&s)
+    res = call @sa_lazy_seg_query(&lt, 0, 0)
+    ok = eq res, 10
+    !res
+    call @sa_lazy_seg_free(^lt)
+    br ok -> L_PASS_LT, L_FAIL_LT
+L_PASS_LT:
+    !ok
+    return
+L_FAIL_LT:
+    !ok
+    panic(104)

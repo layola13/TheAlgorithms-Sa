@@ -1,0 +1,9 @@
+@import "../common/algorithms.sa"
+
+@import "quick_select.sa"
+@import "exponential_search.sa"
+@import "interpolation_search.sa"
+@import "jump_search.sa"
+@import "fibonacci_search.sa"
+@import "ternary_search.sa"
+@import "moore_voting.sa"

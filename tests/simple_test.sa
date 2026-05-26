@@ -1,0 +1,9 @@
+@test "addition"():
+L_ENTRY:
+    a = add 5, 10
+    ok = eq a, 15
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)

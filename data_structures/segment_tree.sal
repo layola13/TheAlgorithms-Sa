@@ -1,0 +1,4 @@
+#def SegmentTree_SIZE = 24
+#def SegmentTree_size = +0
+#def SegmentTree_nodes = +8
+#def SegmentTree_merge = +16

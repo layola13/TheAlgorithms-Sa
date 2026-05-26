@@ -1,0 +1,13 @@
+@import "../data_structures/linked_list.sa"
+@test "linked list"():
+L_ENTRY:
+    list = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&list, 5)
+    len = call @sa_linked_list_len(&list)
+    ok = eq len, 1
+    call @sa_linked_list_free(^list)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(403)

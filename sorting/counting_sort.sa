@@ -1,0 +1,80 @@
+@import "sa_std/core/slice.sal"
+
+@counting_sort_outer(&data: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    ioff = mul i, 8
+    ip = ptr_add data, ioff
+    key = load ip+0 as u64
+    j = sub i, 1
+    call @counting_sort_inner(&data, j, key, i)
+    ni = add i, 1
+    call @counting_sort_outer(&data, ni, n)
+    !ioff
+    !ip
+    !key
+    !j
+    !ni
+    return
+L_DONE:
+    return
+
+@counting_sort_inner(&data: ptr, j: u64, key: u64, i: u64) -> void:
+L_ENTRY:
+    iw = ugt j, i
+    br iw -> L_FIN, L_CHECK
+L_CHECK:
+    joff = mul j, 8
+    jp = ptr_add data, joff
+    vj = load jp+0 as u64
+    gt = ugt vj, key
+    br gt -> L_MOVE, L_FIN_CLEAN
+L_MOVE:
+    jp1_idx = add j, 1
+    jp1_off = mul jp1_idx, 8
+    jp1 = ptr_add data, jp1_off
+    store jp1+0, vj as u64
+    nj = sub j, 1
+    call @counting_sort_inner(&data, nj, key, i)
+    !joff
+    !jp
+    !vj
+    !gt
+    !jp1_idx
+    !jp1_off
+    !jp1
+    !nj
+    return
+L_FIN_CLEAN:
+    !joff
+    !jp
+    !vj
+    !gt
+L_FIN:
+    jf = add j, 1
+    jfo = mul jf, 8
+    jfp = ptr_add data, jfo
+    store jfp+0, key as u64
+    !jf
+    !jfo
+    !jfp
+    !iw
+    return
+
+@export sa_counting_sort(&slice: ptr, max_val: u64) -> void:
+L_ENTRY:
+    n = load slice+Slice_len as u64
+    data = load slice+Slice_ptr as ptr
+    is_small = ule n, 1
+    br is_small -> L_DONE, L_START
+L_START:
+    i = 1 as u64
+    call @counting_sort_outer(&data, i, n)
+    !i
+L_DONE:
+    !max_val
+    !n
+    !data
+    return

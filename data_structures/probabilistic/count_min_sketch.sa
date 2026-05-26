@@ -1,0 +1,218 @@
+@import "sa_std/core/mem.sa"
+@import "count_min_sketch.sal"
+
+@cms_hash(&key: ptr, seed: u64) -> u64:
+L_ENTRY:
+    bits0 = bitcast key as u64
+    mix0 = xor bits0, seed
+    mix1 = mul mix0, 1099511628211
+    mix2 = shr mix1, 32
+    mix3 = xor mix1, mix2
+    !bits0
+    !mix0
+    !mix1
+    !mix2
+    !seed
+    !key
+    return mix3
+
+@cms_row_ptr(&counts: ptr, width: u64, row: u64) -> ptr:
+L_ENTRY:
+    row_off = mul row, width
+    byte_off = mul row_off, 8
+    row_ptr = ptr_add counts, byte_off
+    !byte_off
+    !row_off
+    !width
+    !row
+    return row_ptr
+
+@cms_cell_ptr(&counts: ptr, width: u64, row: u64, col: u64) -> ptr:
+L_ENTRY:
+    row_ptr = call @cms_row_ptr(&counts, width, row)
+    col_off = mul col, 8
+    cell_ptr = ptr_add row_ptr, col_off
+    !col_off
+    !row_ptr
+    !width
+    !row
+    !col
+    return cell_ptr
+
+@cms_apply_increment(&counts: ptr, width: u64, depth: u64, key: u64, count: u64, row: u64) -> void:
+L_ENTRY:
+    done = uge row, depth
+    br done -> L_DONE, L_BODY
+
+L_BODY:
+    seed = add row, 1
+    hash = call @cms_hash(&key, seed)
+    col = urem hash, width
+    cell = call @cms_cell_ptr(&counts, width, row, col)
+    current = load cell+0 as u64
+    next = add current, count
+    store cell+0, next as u64
+    next_row = add row, 1
+    call @cms_apply_increment(&counts, width, depth, key, count, next_row)
+    !next_row
+    !next
+    !current
+    !cell
+    !col
+    !hash
+    !seed
+    !done
+    return
+
+L_DONE:
+    !row
+    !depth
+    !width
+    !counts
+    !key
+    !count
+    return
+
+@cms_apply_query(&counts: ptr, width: u64, depth: u64, key: u64, row: u64, best: u64) -> u64:
+L_ENTRY:
+    done = uge row, depth
+    br done -> L_RETURN, L_BODY
+
+L_BODY:
+    seed = add row, 1
+    hash = call @cms_hash(&key, seed)
+    col = urem hash, width
+    cell = call @cms_cell_ptr(&counts, width, row, col)
+    value = load cell+0 as u64
+    is_first = eq row, 0
+    br is_first -> L_INIT, L_NEXT
+
+L_INIT:
+    next_best = value
+    next_row = add row, 1
+    result = call @cms_apply_query(&counts, width, depth, key, next_row, next_best)
+    !next_best
+    !next_row
+    !cell
+    !col
+    !hash
+    !seed
+    !is_first
+    !done
+    return result
+
+L_NEXT:
+    smaller = ult value, best
+    br smaller -> L_UPDATE, L_KEEP
+
+L_UPDATE:
+    next_best = value
+    next_row = add row, 1
+    result = call @cms_apply_query(&counts, width, depth, key, next_row, next_best)
+    !next_best
+    !next_row
+    !smaller
+    !cell
+    !col
+    !hash
+    !seed
+    !done
+    return result
+
+L_KEEP:
+    next_best = best
+    next_row = add row, 1
+    result = call @cms_apply_query(&counts, width, depth, key, next_row, next_best)
+    !next_best
+    !next_row
+    !smaller
+    !cell
+    !col
+    !hash
+    !seed
+    !done
+    return result
+
+L_RETURN:
+    !row
+    !depth
+    !width
+    !counts
+    !key
+    return best
+
+@export sa_count_min_sketch_new(width: u64, depth: u64) -> ^ptr:
+L_ENTRY:
+    slots = mul width, depth
+    total_bytes = mul slots, 8
+    counts = alloc total_bytes
+    call @sa_mem_set(&counts, 0, total_bytes)
+    sketch = alloc CountMinSketch_SIZE
+    __addr2 = ptr_add sketch, CountMinSketch_counts
+    store __addr2+0, counts as ptr
+    !__addr2
+    __addr2 = ptr_add sketch, CountMinSketch_width
+    store __addr2+0, width as u64
+    !__addr2
+    __addr2 = ptr_add sketch, CountMinSketch_depth
+    store __addr2+0, depth as u64
+    !__addr2
+    __addr2 = ptr_add sketch, CountMinSketch_total_bytes
+    store __addr2+0, total_bytes as u64
+    !__addr2
+    return sketch
+
+@export sa_count_min_sketch_free(^sketch: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add sketch, CountMinSketch_counts
+    counts = load __addr+0 as ptr
+    !__addr
+    !counts
+    !sketch
+    return
+
+@export sa_count_min_sketch_increment(&sketch: ptr, key: u64) -> void:
+L_ENTRY:
+    call @sa_count_min_sketch_increment_by(&sketch, key, 1)
+    !key
+    !sketch
+    return
+
+@export sa_count_min_sketch_increment_by(&sketch: ptr, key: u64, count: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add sketch, CountMinSketch_counts
+    counts = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add sketch, CountMinSketch_width
+    width = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add sketch, CountMinSketch_depth
+    depth = load __addr+0 as u64
+    !__addr
+    call @cms_apply_increment(&counts, width, depth, key, count, 0)
+    !count
+    !key
+    !depth
+    !width
+    !counts
+    !sketch
+    return
+
+@export sa_count_min_sketch_get_count(&sketch: ptr, key: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add sketch, CountMinSketch_counts
+    counts = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add sketch, CountMinSketch_width
+    width = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add sketch, CountMinSketch_depth
+    depth = load __addr+0 as u64
+    !__addr
+    result = call @cms_apply_query(&counts, width, depth, key, 0, 0)
+    !key
+    !depth
+    !width
+    !counts
+    !sketch
+    return result

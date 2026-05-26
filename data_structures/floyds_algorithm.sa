@@ -1,0 +1,100 @@
+@import "linked_list.sa"
+
+@ll_next_ptr(&node: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add node, LinkedListNode_next
+    next = load __addr+0 as ptr
+    !__addr
+    !node
+    return next
+
+@ll_has_cycle_step(&slow: ptr, &fast: ptr, steps: u64) -> i32:
+L_ENTRY:
+    done = eq steps, 0
+    br done -> L_NO, L_STEP
+
+L_STEP:
+    fast_is_null = eq fast, 0
+    br fast_is_null -> L_NO, L_FAST_ONE
+
+L_FAST_ONE:
+    fast1 = call @ll_next_ptr(&fast)
+    fast1_is_null = eq fast1, 0
+    br fast1_is_null -> L_NO, L_FAST_TWO
+
+L_FAST_TWO:
+    fast2 = call @ll_next_ptr(&fast1)
+    slow1 = call @ll_next_ptr(&slow)
+    same = eq slow1, fast2
+    br same -> L_YES, L_RECURSE
+
+L_RECURSE:
+    next_steps = sub steps, 1
+    result = call @ll_has_cycle_step(&slow1, &fast2, next_steps)
+    !same
+    !slow1
+    !fast2
+    !next_steps
+    !done
+    return result
+
+L_YES:
+    !same
+    !slow1
+    !fast2
+    !done
+    return 1
+
+L_NO:
+    !slow
+    !fast
+    !done
+    return 0
+
+@export sa_has_cycle(&list: ptr) -> i32:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    empty = eq head, 0
+    br empty -> L_EMPTY, L_READY
+
+L_READY:
+    fast = call @ll_next_ptr(&head)
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    result = call @ll_has_cycle_step(&head, &fast, len)
+    !len
+    !fast
+    !head
+    !empty
+    !list
+    return result
+
+L_EMPTY:
+    !head
+    !empty
+    !list
+    return 0
+
+@export sa_detect_cycle(&list: ptr) -> u64:
+L_ENTRY:
+    has = call @sa_has_cycle(&list)
+    is_cycle = ne has, 0
+    br is_cycle -> L_CYCLE, L_NONE
+
+L_CYCLE:
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    !is_cycle
+    !has
+    !list
+    return len
+
+L_NONE:
+    !is_cycle
+    !has
+    !list
+    return 0

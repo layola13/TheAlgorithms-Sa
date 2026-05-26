@@ -1,0 +1,116 @@
+@import "../common/arrays.sal"
+@import "sa_std/core/slice.sal"
+
+@binary_search_rec(data: ptr, low: u64, high: u64, target: u64) -> i64:
+L_ENTRY:
+    done = ugt low, high
+    br done -> L_NF, L_BODY
+L_BODY:
+    sum = add low, high
+    two = 2 as u64
+    mid = udiv sum, two
+    eight = 8 as u64
+    off = mul mid, eight
+    ip = ptr_add data, off
+    val = load ip+0 as u64
+    hit = eq val, target
+    br hit -> L_FOUND, L_CMP
+L_CMP:
+    lt = ult val, target
+    br lt -> L_RIGHT, L_LEFT_CHECK
+L_RIGHT:
+    one = 1 as u64
+    next_low = add mid, one
+    res = call @binary_search_rec(data, next_low, high, target)
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !ip
+    !val
+    !hit
+    !lt
+    !one
+    !next_low
+    !done
+    return res
+L_LEFT_CHECK:
+    zero = 0 as u64
+    at_zero = eq mid, zero
+    br at_zero -> L_LEFT_NF, L_LEFT
+L_LEFT:
+    one2 = 1 as u64
+    next_high = sub mid, one2
+    res2 = call @binary_search_rec(data, low, next_high, target)
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !ip
+    !val
+    !hit
+    !lt
+    !zero
+    !at_zero
+    !one2
+    !next_high
+    !done
+    return res2
+L_LEFT_NF:
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !ip
+    !val
+    !hit
+    !lt
+    !zero
+    !at_zero
+    !done
+    return -1
+L_FOUND:
+    mid_i = bitcast mid as i64
+    !sum
+    !two
+    !eight
+    !off
+    !ip
+    !val
+    !hit
+    !done
+    !mid
+    return mid_i
+L_NF:
+    !done
+    return -1
+
+@export sa_binary_search_u64(&slice: ptr, target: u64) -> i64:
+L_ENTRY:
+    len = load slice+Slice_len as u64
+    data = load slice+Slice_ptr as ptr
+    zero = 0 as u64
+    is_empty = eq len, zero
+    br is_empty -> L_NF, L_START
+L_START:
+    one = 1 as u64
+    high = sub len, one
+    res = call @binary_search_rec(data, zero, high, target)
+    !len
+    !data
+    !zero
+    !is_empty
+    !one
+    !high
+    !slice
+    return res
+L_NF:
+    !len
+    !data
+    !zero
+    !is_empty
+    !slice
+    return -1

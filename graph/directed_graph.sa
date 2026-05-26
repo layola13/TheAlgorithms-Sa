@@ -1,0 +1,55 @@
+@import "sa_std/hashmap.sa"
+@import "sa_std/alloc/vec.sa"
+
+@export sa_graph_new() -> ^ptr:
+L_ENTRY:
+    graph = alloc 16
+    table = call @sa_map_new()
+    store graph+0, table as ptr
+    store graph+8, 0 as u64
+    return graph
+
+@export sa_graph_add_node(&graph: ptr, &node_key: ptr) -> void:
+L_ENTRY:
+    table = load graph+0 as ptr
+
+    exists = call @sa_map_contains_key(&table, &node_key)
+    br exists -> L_DONE, L_ADD
+L_ADD:
+    adj = call @sa_vec_new()
+    call @sa_map_put(&table, &node_key, &adj)
+
+    count = load graph+8 as u64
+    next_count = add count, 1
+    store graph+8, next_count as u64
+    !adj
+    jmp L_DONE
+L_DONE:
+    !exists
+    return
+
+@export sa_graph_add_edge(&graph: ptr, &u: ptr, &v: ptr, weight: i32) -> void:
+L_ENTRY:
+    call @sa_graph_add_node(&graph, &u)
+    call @sa_graph_add_node(&graph, &v)
+    
+    table = load graph+0 as ptr
+    adj_u = call @sa_map_get(&table, &u)
+    
+
+
+
+    new_adj_u = call @sa_vec_push(^adj_u, v, 8)
+    call @sa_map_put(&table, &u, &new_adj_u)
+    !new_adj_u
+    return
+
+@export sa_graph_free(^graph: ptr) -> void:
+L_ENTRY:
+    table = load graph+0 as ptr
+
+
+
+    call @sa_map_free(^table)
+    !graph
+    return

@@ -1,0 +1,327 @@
+@import "sa_std/core/slice.sal"
+@import "trie.sal"
+
+@trie_zero_node(&node: ptr, i: u64) -> void:
+L_ENTRY:
+    limit = 26 as u64
+    done = eq i, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    off = mul i, 8
+    ptr_off = add off, TrieNode_children
+    ptr_to_child = ptr_add node, ptr_off
+    store ptr_to_child+0, 0 as ptr
+    one = 1 as u64
+    next_i = add i, one
+    call @trie_zero_node(&node, next_i)
+    !limit
+    !done
+    !off
+    !ptr_off
+    !ptr_to_child
+    !one
+    !next_i
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@trie_node_new() -> ^ptr:
+L_ENTRY:
+    node = alloc TrieNode_SIZE
+    zero = 0 as u8
+    __addr2 = ptr_add node, TrieNode_is_end
+    store __addr2+0, zero as u8
+    !__addr2
+    zero_u64 = 0 as u64
+    call @trie_zero_node(&node, zero_u64)
+    !zero
+    !zero_u64
+    return node
+
+@export sa_trie_new() -> ^ptr:
+L_ENTRY:
+    trie = alloc Trie_SIZE
+    root = call @trie_node_new()
+    __addr2 = ptr_add trie, Trie_root
+    store __addr2+0, root as ptr
+    !__addr2
+    return trie
+
+@trie_insert_rec(&curr: ptr, &data: ptr, i: u64, len: u64) -> void:
+L_ENTRY:
+    done = eq i, len
+    br done -> L_FINAL, L_BODY
+L_BODY:
+    p = ptr_add data, i
+    char = load p+0 as u8
+    a_val = 97 as u8
+    char_idx = sub char, a_val
+    char_u64 = zext char_idx as u64
+    
+    off = mul char_u64, 8
+    ptr_off = add off, TrieNode_children
+    child_p = ptr_add curr, ptr_off
+    child = load child_p+0 as ptr
+    
+    is_null = eq child, 0
+    br is_null -> L_CREATE, L_CONTINUE
+L_CREATE:
+    nn = call @trie_node_new()
+    store child_p+0, nn as ptr
+    one = 1 as u64
+    next_i = add i, one
+    call @trie_insert_rec(&nn, &data, next_i, len)
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !nn
+    !one
+    !next_i
+    !done
+    return
+L_CONTINUE:
+    one2 = 1 as u64
+    next_i2 = add i, one2
+    call @trie_insert_rec(&child, &data, next_i2, len)
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !one2
+    !next_i2
+    !done
+    return
+L_FINAL:
+    one3 = 1 as u8
+    __addr2 = ptr_add curr, TrieNode_is_end
+    store __addr2+0, one3 as u8
+    !__addr2
+    !one3
+    !done
+    return
+
+@export sa_trie_insert(&trie: ptr, &str_slice: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add trie, Trie_root
+    root = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add str_slice, Slice_len
+    len = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add str_slice, Slice_ptr
+    data = load __addr+0 as ptr
+    !__addr
+    zero = 0 as u64
+    call @trie_insert_rec(&root, &data, zero, len)
+    !zero
+    return
+
+@trie_search_rec(&curr: ptr, &data: ptr, i: u64, len: u64) -> i32:
+L_ENTRY:
+    done = eq i, len
+    br done -> L_FINAL, L_BODY
+L_BODY:
+    p = ptr_add data, i
+    char = load p+0 as u8
+    a_val = 97 as u8
+    char_idx = sub char, a_val
+    char_u64 = zext char_idx as u64
+    
+    off = mul char_u64, 8
+    ptr_off = add off, TrieNode_children
+    child_p = ptr_add curr, ptr_off
+    child = load child_p+0 as ptr
+    
+    is_null = eq child, 0
+    br is_null -> L_FAIL, L_CONTINUE
+L_CONTINUE:
+    one = 1 as u64
+    next_i = add i, one
+    res = call @trie_search_rec(&child, &data, next_i, len)
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !one
+    !next_i
+    !done
+    return res
+L_FAIL:
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !done
+    return 0
+L_FINAL:
+    __addr = ptr_add curr, TrieNode_is_end
+    is_end = load __addr+0 as u8
+    !__addr
+    res2 = zext is_end as i32
+    !is_end
+    !done
+    return res2
+
+@export sa_trie_search(&trie: ptr, &str_slice: ptr) -> i32:
+L_ENTRY:
+    __addr = ptr_add trie, Trie_root
+    root = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add str_slice, Slice_len
+    len = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add str_slice, Slice_ptr
+    data = load __addr+0 as ptr
+    !__addr
+    zero = 0 as u64
+    res = call @trie_search_rec(&root, &data, zero, len)
+    !zero
+    return res
+
+@trie_starts_with_rec(&curr: ptr, &data: ptr, i: u64, len: u64) -> i32:
+L_ENTRY:
+    done = eq i, len
+    br done -> L_FOUND, L_BODY
+L_BODY:
+    p = ptr_add data, i
+    char = load p+0 as u8
+    a_val = 97 as u8
+    char_idx = sub char, a_val
+    char_u64 = zext char_idx as u64
+
+    off = mul char_u64, 8
+    ptr_off = add off, TrieNode_children
+    child_p = ptr_add curr, ptr_off
+    child = load child_p+0 as ptr
+
+    is_null = eq child, 0
+    br is_null -> L_FAIL, L_CONTINUE
+L_CONTINUE:
+    one = 1 as u64
+    next_i = add i, one
+    res = call @trie_starts_with_rec(&child, &data, next_i, len)
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !one
+    !next_i
+    !done
+    return res
+L_FAIL:
+    !p
+    !char
+    !a_val
+    !char_idx
+    !char_u64
+    !off
+    !ptr_off
+    !child_p
+    !child
+    !is_null
+    !done
+    return 0
+L_FOUND:
+    !done
+    return 1
+
+@export sa_trie_starts_with(&trie: ptr, &str_slice: ptr) -> i32:
+L_ENTRY:
+    __addr = ptr_add trie, Trie_root
+    root = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add str_slice, Slice_len
+    len = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add str_slice, Slice_ptr
+    data = load __addr+0 as ptr
+    !__addr
+    zero = 0 as u64
+    res = call @trie_starts_with_rec(&root, &data, zero, len)
+    !zero
+    return res
+
+@trie_node_free_children(&node: ptr, i: u64) -> void:
+L_ENTRY:
+    limit = 26 as u64
+    done = eq i, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    off = mul i, 8
+    ptr_off = add off, TrieNode_children
+    ptr_to_child = ptr_add node, ptr_off
+    child = load ptr_to_child+0 as ptr
+    call @trie_node_free(^child)
+    one = 1 as u64
+    next_i = add i, one
+    call @trie_node_free_children(&node, next_i)
+    !limit
+    !done
+    !off
+    !ptr_off
+    !ptr_to_child
+    !one
+    !next_i
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@trie_node_free(^node: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NULL, L_BODY
+L_BODY:
+    zero = 0 as u64
+    call @trie_node_free_children(&node, zero)
+    !node
+    !is_null
+    !zero
+    return
+L_NULL:
+    !node
+    !is_null
+    return
+
+@export sa_trie_free(^trie: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add trie, Trie_root
+    root = load __addr+0 as ptr
+    !__addr
+    call @trie_node_free(^root)
+    !trie
+    return

@@ -1,0 +1,288 @@
+@import "sa_std/core/option.sa"
+@import "sa_std/core/option.sal"
+@import "sa_std/core/mem.sa"
+@import "linked_list.sal"
+
+@ll_node_new(value: u64, next: ptr) -> ^ptr:
+L_ENTRY:
+    node = alloc LinkedListNode_SIZE
+    __addr2 = ptr_add node, LinkedListNode_value
+    store __addr2+0, value as u64
+    !__addr2
+    __addr2 = ptr_add node, LinkedListNode_next
+    store __addr2+0, next as ptr
+    !__addr2
+    return node
+
+@ll_node_value(&node: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add node, LinkedListNode_value
+    value = load __addr+0 as u64
+    !__addr
+    !node
+    return value
+
+@ll_node_next(&node: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add node, LinkedListNode_next
+    next = load __addr+0 as ptr
+    !__addr
+    !node
+    return next
+
+@ll_node_free_n(^node: ptr, limit: u64) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    no_more = eq limit, 0
+    stop = or is_null, no_more
+    br stop -> L_FREE_DONE, L_FREE_BODY
+
+L_FREE_BODY:
+    __addr = ptr_add node, LinkedListNode_next
+    next = load __addr+0 as ptr
+    !__addr
+    next_limit = sub limit, 1
+    call @ll_node_free_n(^next, next_limit)
+    !node
+    return
+
+L_FREE_DONE:
+    !stop
+    !no_more
+    !is_null
+    !node
+    return
+
+@export sa_linked_list_new() -> ^ptr:
+L_ENTRY:
+    list = alloc LinkedList_SIZE
+    __addr2 = ptr_add list, LinkedList_head
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add list, LinkedList_tail
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add list, LinkedList_len
+    store __addr2+0, 0 as u64
+    !__addr2
+    return list
+
+@export sa_linked_list_free(^list: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    call @ll_node_free_n(^head, len)
+    !list
+    return
+
+@export sa_linked_list_len(&list: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    !list
+    return len
+
+@export sa_linked_list_is_empty(&list: ptr) -> i32:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    empty = eq len, 0
+    result = empty as i32
+    !len
+    !list
+    return result
+
+@export sa_linked_list_push_back(&list: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add list, LinkedList_tail
+    tail = load __addr+0 as ptr
+    !__addr
+    node = call @ll_node_new(value, 0)
+    is_empty = eq head, 0
+    br is_empty -> L_EMPTY, L_NONEMPTY
+
+L_EMPTY:
+    __addr2 = ptr_add list, LinkedList_head
+    store __addr2+0, node as ptr
+    !__addr2
+    __addr2 = ptr_add list, LinkedList_tail
+    store __addr2+0, node as ptr
+    !__addr2
+    next_len = add 0, 1
+    __addr2 = ptr_add list, LinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !is_empty
+    !tail
+    !head
+    !node
+    !list
+    return
+
+L_NONEMPTY:
+    __addr2 = ptr_add tail, LinkedListNode_next
+    store __addr2+0, node as ptr
+    !__addr2
+    __addr2 = ptr_add list, LinkedList_tail
+    store __addr2+0, node as ptr
+    !__addr2
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    next_len = add len, 1
+    __addr2 = ptr_add list, LinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !is_empty
+    !tail
+    !head
+    !node
+    !list
+    return
+
+@export sa_linked_list_push_front(&list: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    node = call @ll_node_new(value, head)
+    __addr2 = ptr_add list, LinkedList_head
+    store __addr2+0, node as ptr
+    !__addr2
+    __addr = ptr_add list, LinkedList_tail
+    tail = load __addr+0 as ptr
+    !__addr
+    is_empty = eq tail, 0
+    br is_empty -> L_FRONT_EMPTY, L_FRONT_DONE
+
+L_FRONT_EMPTY:
+    __addr2 = ptr_add list, LinkedList_tail
+    store __addr2+0, node as ptr
+    !__addr2
+    jmp L_FRONT_DONE
+
+L_FRONT_DONE:
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    next_len = add len, 1
+    __addr2 = ptr_add list, LinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !is_empty
+    !tail
+    !head
+    !node
+    !list
+    return
+
+@export sa_linked_list_front(&list: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    empty = eq head, 0
+    br empty -> L_FRONT_EMPTY_RET, L_FRONT_HIT
+
+L_FRONT_HIT:
+    __addr = ptr_add head, LinkedListNode_value
+    value = load __addr+0 as u64
+    !__addr
+    !empty
+    !head
+    !list
+    return value
+
+L_FRONT_EMPTY_RET:
+    !empty
+    !head
+    !list
+    return 0
+
+@export sa_linked_list_back(&list: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_tail
+    tail = load __addr+0 as ptr
+    !__addr
+    empty = eq tail, 0
+    br empty -> L_BACK_EMPTY, L_BACK_HIT
+
+L_BACK_HIT:
+    __addr = ptr_add tail, LinkedListNode_value
+    value = load __addr+0 as u64
+    !__addr
+    !empty
+    !tail
+    !list
+    return value
+
+L_BACK_EMPTY:
+    !empty
+    !tail
+    !list
+    return 0
+
+@export sa_linked_list_pop_front(&list: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    empty = eq head, 0
+    br empty -> L_POP_EMPTY, L_POP_HIT
+
+L_POP_HIT:
+    __addr = ptr_add head, LinkedListNode_next
+    next = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add head, LinkedListNode_value
+    value = load __addr+0 as u64
+    !__addr
+    __addr2 = ptr_add list, LinkedList_head
+    store __addr2+0, next as ptr
+    !__addr2
+    __addr = ptr_add list, LinkedList_tail
+    tail = load __addr+0 as ptr
+    !__addr
+    became_empty = eq next, 0
+    br became_empty -> L_POP_CLEAR_TAIL, L_POP_DONE
+
+L_POP_CLEAR_TAIL:
+    __addr2 = ptr_add list, LinkedList_tail
+    store __addr2+0, 0 as ptr
+    !__addr2
+    jmp L_POP_DONE
+
+L_POP_DONE:
+    __addr = ptr_add list, LinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    next_len = sub len, 1
+    __addr2 = ptr_add list, LinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !became_empty
+    !tail
+    !next
+    !empty
+    !head
+    !next_len
+    !list
+    return value
+
+L_POP_EMPTY:
+    !empty
+    !head
+    !list
+    return 0

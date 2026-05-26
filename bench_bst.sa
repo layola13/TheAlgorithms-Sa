@@ -1,0 +1,45 @@
+@import "data_structures/binary_search_tree.sa"
+@import "sa_std/time.sa"
+@main() -> i32:
+L_ENTRY:
+    b = call @sa_bst_new()
+    root_v = 5000 as u64
+    call @sa_bst_insert(&b, root_v)
+    s = call @sa_time_instant_ns()
+    n = 10000 as u64
+    call @ins_loop(&b, n)
+    e = call @sa_time_instant_ns()
+    diff = sub e, s
+    m = 1000000 as u64
+    res = udiv diff, m
+    res_i = zext res as i32
+    call @sa_bst_free(^b)
+    !res
+    !root_v
+    return res_i
+
+@ins_loop(&b: ptr, n: u64) -> void:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    !zero
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, n
+    br done -> L_D, L_B
+L_B:
+    call @sa_bst_insert(&b, i)
+    ni = add i, 1
+    store i_slot+0, ni as u64
+    !i
+    !ni
+    !done
+    jmp L_LOOP
+L_D:
+    !i
+    !done
+    !b
+    !n
+    return

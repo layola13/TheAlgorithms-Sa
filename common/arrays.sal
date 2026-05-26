@@ -1,0 +1,3 @@
+#def I32_SIZE = 4
+#def U64_SIZE = 8
+

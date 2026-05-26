@@ -1,0 +1,40 @@
+@import "binary_search_tree.sal"
+
+@splay_rotate_right(^y: ptr) -> ^ptr:
+L_ENTRY:
+    x = load y+BSTNode_left as ptr
+    is_null = eq x, 0
+    br is_null -> L_NOOP, L_ROTATE
+L_NOOP:
+    !x
+    !is_null
+    return y
+L_ROTATE:
+    t2 = load x+BSTNode_right as ptr
+    store x+BSTNode_right, y as ptr
+    store y+BSTNode_left, t2 as ptr
+    !t2
+    !is_null
+    return x
+
+@splay_rotate_left(^x: ptr) -> ^ptr:
+L_ENTRY:
+    y = load x+BSTNode_right as ptr
+    is_null = eq y, 0
+    br is_null -> L_NOOP, L_ROTATE
+L_NOOP:
+    !y
+    !is_null
+    return x
+L_ROTATE:
+    t2 = load y+BSTNode_left as ptr
+    store y+BSTNode_left, x as ptr
+    store x+BSTNode_right, t2 as ptr
+    !t2
+    !is_null
+    return y
+
+@splay(^root: ptr, key: u64) -> ^ptr:
+L_ENTRY:
+    !key
+    return root

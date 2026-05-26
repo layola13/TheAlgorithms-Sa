@@ -1,0 +1,10 @@
+#def BST_SIZE = 32
+#def BST_root = +0
+#def BST_len = +8
+#def BST_last = +16
+#def BST_last_high = +24
+
+#def BSTNode_SIZE = 24
+#def BSTNode_value = +0
+#def BSTNode_left = +8
+#def BSTNode_right = +16

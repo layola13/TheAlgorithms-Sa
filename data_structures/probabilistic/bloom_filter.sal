@@ -1,0 +1,4 @@
+#def BloomFilter_SIZE = 32
+#def BloomFilter_bits = +0
+#def BloomFilter_bit_len = +8
+#def BloomFilter_hash_count = +16

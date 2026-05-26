@@ -1,0 +1,15 @@
+@export sa_avl_new() -> ^ptr:
+L_ENTRY:
+    avl = alloc 16
+    return avl
+
+@export sa_avl_free(^avl: ptr) -> void:
+L_ENTRY:
+    !avl
+    return
+
+@test "avl"():
+L_ENTRY:
+    a = call @sa_avl_new()
+    call @sa_avl_free(^a)
+    return

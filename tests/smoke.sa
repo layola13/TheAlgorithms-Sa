@@ -1,0 +1,828 @@
+@import "sa_std/core/slice.sa"
+@import "sa_std/core/option.sa"
+@import "sa_std/core/result.sa"
+@import "sa_std/sort.sa"
+@import "../data_structures/stack.sa"
+@import "../data_structures/stack_using_singly_linked_list.sa"
+@import "../data_structures/queue.sa"
+@import "../data_structures/heap.sa"
+@import "../data_structures/linked_list.sa"
+@import "../data_structures/binary_search_tree.sa"
+@import "../data_structures/floyds_algorithm.sa"
+@import "../data_structures/union_find.sa"
+@import "../data_structures/hash_table.sa"
+@import "../data_structures/fenwick_tree.sa"
+@import "../data_structures/avl_tree.sa"
+@import "../data_structures/trie.sa"
+@import "../data_structures/skip_list.sa"
+@import "../data_structures/treap.sa"
+@import "../data_structures/sparse_table.sa"
+@import "../data_structures/lazy_segment_tree.sa"
+@import "../data_structures/probabilistic/bloom_filter.sa"
+@import "../data_structures/probabilistic/count_min_sketch.sa"
+@import "../sorting/heap_sort.sa"
+@import "../sorting/merge_sort.sa"
+@import "../sorting/counting_sort.sa"
+@import "../sorting/radix_sort.sa"
+@import "../searching/quick_select.sa"
+@import "../searching/exponential_search.sa"
+@import "../searching/interpolation_search.sa"
+
+@const SORT_VT_U64 = vtable { cmp = @cmp_u64_asc }
+
+@cmp_u64_asc(&lhs: ptr, &rhs: ptr) -> i32:
+L_ENTRY:
+    left = load lhs+0 as u64
+    right = load rhs+0 as u64
+    is_lt = ult left, right
+    br is_lt -> L_LT, L_CHECK_GT
+L_LT:
+    !right
+    !left
+    !lhs
+    !rhs
+    !is_lt
+    return -1
+L_CHECK_GT:
+    !is_lt
+    is_gt = ugt left, right
+    br is_gt -> L_GT, L_EQ
+L_GT:
+    !right
+    !left
+    !lhs
+    !rhs
+    !is_gt
+    return 1
+L_EQ:
+    !right
+    !left
+    !lhs
+    !rhs
+    !is_gt
+    return 0
+
+@test "sorting quick sort u64"():
+L_ENTRY:
+    arr = alloc 40
+    store arr+0, 9 as u64
+    store arr+8, 2 as u64
+    store arr+16, 7 as u64
+    store arr+24, 1 as u64
+    store arr+32, 5 as u64
+    cmp_vt = &SORT_VT_U64
+    EXPAND QSORT arr, 5, 8, cmp_vt
+    v0 = load arr+0 as u64
+    v1 = load arr+8 as u64
+    v2 = load arr+16 as u64
+    v3 = load arr+24 as u64
+    v4 = load arr+32 as u64
+    ok0 = eq v0, 1
+    ok1 = eq v1, 2
+    ok2 = eq v2, 5
+    ok3 = eq v3, 7
+    ok4 = eq v4, 9
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    pair2 = and pair0, ok4
+    ok = and pair1, pair2
+    !v0
+    !v1
+    !v2
+    !v3
+    !v4
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !pair0
+    !pair1
+    !pair2
+    br ok -> L_OK, L_ERR
+
+L_OK:
+    !cmp_vt
+    !ok
+    return
+
+L_ERR:
+    !ok
+    panic(301)
+
+@test "data structures stack queue heap uf"():
+L_ENTRY:
+    stack = call @sa_stack_new()
+    call @sa_stack_push(&stack, 10)
+    call @sa_stack_push(&stack, 20)
+    spop = call @sa_stack_pop(&stack)
+    speek = call @sa_stack_peek(&stack)
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 1)
+    call @sa_queue_enqueue(&q, 2)
+    qpop = call @sa_queue_dequeue(&q)
+    qpeek = call @sa_queue_peek_front(&q)
+    heap = call @sa_heap_new()
+    call @sa_heap_add(&heap, 3)
+    call @sa_heap_add(&heap, 7)
+    htop = call @sa_heap_peek(&heap)
+    uf = call @sa_uf_new()
+    n0 = call @sa_uf_make_set(&uf)
+    n1 = call @sa_uf_make_set(&uf)
+    same0 = call @sa_uf_same_set(&uf, n0, n1)
+    merged = call @sa_uf_union(&uf, n0, n1)
+    same1 = call @sa_uf_same_set(&uf, n0, n1)
+    ccount = call @sa_uf_count(&uf)
+    ok0 = eq spop, 20
+    ok1 = eq speek, 10
+    ok2 = eq qpop, 1
+    ok3 = eq qpeek, 2
+    ok4 = eq htop, 7
+    ok5 = eq same0, 0
+    ok6 = eq merged, 1
+    ok7 = eq same1, 1
+    ok8 = eq ccount, 1
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    pair2 = and ok4, ok5
+    pair3 = and ok6, ok7
+    pair4 = and pair0, pair1
+    pair5 = and pair2, pair3
+    ok = and pair4, pair5
+    ok = and ok, ok8
+    !spop
+    !speek
+    !qpop
+    !qpeek
+    !htop
+    !same0
+    !same1
+    !merged
+    !ccount
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !ok7
+    !ok8
+    !pair0
+    !pair1
+    !pair2
+    !pair3
+    !pair4
+    !pair5
+    br ok -> L_DS_OK, L_DS_ERR
+
+L_DS_OK:
+    !stack
+    !q
+    !heap
+    !uf
+    !ok
+    return
+
+L_DS_ERR:
+    !stack
+    !q
+    !heap
+    !uf
+    !ok
+    panic(302)
+
+@test "data structures linked list and sll stack"():
+L_ENTRY:
+    list = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&list, 11)
+    call @sa_linked_list_push_back(&list, 22)
+    call @sa_linked_list_push_front(&list, 5)
+    lfront = call @sa_linked_list_front(&list)
+    lback = call @sa_linked_list_back(&list)
+    lpop = call @sa_linked_list_pop_front(&list)
+
+    s = call @sa_stack_sll_new()
+    call @sa_stack_sll_push(&s, 100)
+    call @sa_stack_sll_push(&s, 200)
+    spop = call @sa_stack_sll_pop(&s)
+    speek = call @sa_stack_sll_peek(&s)
+
+    ok0 = eq lfront, 5
+    ok1 = eq lback, 22
+    ok2 = eq lpop, 5
+    ok3 = eq spop, 200
+    ok4 = eq speek, 100
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    ok = and pair0, pair1
+    ok = and ok, ok4
+    !lfront
+    !lback
+    !lpop
+    !spop
+    !speek
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !pair0
+    !pair1
+    br ok -> L_LL_OK, L_LL_ERR
+
+L_LL_OK:
+    call @sa_linked_list_free(^list)
+    call @sa_stack_sll_free(^s)
+    !ok
+    return
+
+L_LL_ERR:
+    call @sa_linked_list_free(^list)
+    call @sa_stack_sll_free(^s)
+    !ok
+    panic(304)
+
+@test "data structures bst"():
+L_ENTRY:
+    bst = call @sa_bst_new()
+    call @sa_bst_insert(&bst, 5)
+    call @sa_bst_insert(&bst, 2)
+    call @sa_bst_insert(&bst, 8)
+    call @sa_bst_insert(&bst, 1)
+    call @sa_bst_insert(&bst, 3)
+    found3 = call @sa_bst_search(&bst, 3)
+    found9 = call @sa_bst_search(&bst, 9)
+    minv = call @sa_bst_min(&bst)
+    maxv = call @sa_bst_max(&bst)
+    ok0 = eq found3, 1
+    ok1 = eq found9, 0
+    ok2 = eq minv, 1
+    ok3 = eq maxv, 8
+    pair0 = and ok0, ok1
+    ok = and pair0, ok2
+    ok = and ok, ok3
+    !found3
+    !found9
+    !minv
+    !maxv
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !pair0
+    br ok -> L_BST_OK, L_BST_ERR
+
+L_BST_OK:
+    call @sa_bst_free(^bst)
+    !ok
+    return
+
+L_BST_ERR:
+    call @sa_bst_free(^bst)
+    !ok
+    panic(307)
+
+@test "data structures floyd cycle"():
+L_ENTRY:
+    list = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&list, 1)
+    call @sa_linked_list_push_back(&list, 2)
+    call @sa_linked_list_push_back(&list, 3)
+    has0 = call @sa_has_cycle(&list)
+    detect0 = call @sa_detect_cycle(&list)
+
+    __addr = ptr_add list, LinkedList_head
+    head = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add list, LinkedList_tail
+    tail = load __addr+0 as ptr
+    !__addr
+    __addr2 = ptr_add tail, LinkedListNode_next
+    store __addr2+0, head as ptr
+    !__addr2
+
+    has1 = call @sa_has_cycle(&list)
+    detect1 = call @sa_detect_cycle(&list)
+
+    ok0 = eq has0, 0
+    ok1 = eq detect0, 0
+    ok2 = eq has1, 1
+    ok3 = eq detect1, 3
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    ok = and pair0, pair1
+    !has0
+    !detect0
+    !has1
+    !detect1
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !pair0
+    !pair1
+    br ok -> L_FLOYD_OK, L_FLOYD_ERR
+
+L_FLOYD_OK:
+    call @sa_linked_list_free(^list)
+    !ok
+    return
+
+L_FLOYD_ERR:
+    call @sa_linked_list_free(^list)
+    !ok
+    panic(308)
+
+
+@test "data structures hash table fenwick"():
+L_ENTRY:
+    table = call @sa_hash_table_new()
+    call @sa_hash_table_insert(&table, 7, 70)
+    call @sa_hash_table_insert(&table, 3, 30)
+    got7 = call @sa_hash_table_get(&table, 7)
+    got3 = call @sa_hash_table_get(&table, 3)
+    got0 = call @sa_hash_table_get(&table, 0)
+    fen = call @sa_fenwick_new(8)
+    call @sa_fenwick_set(&fen, 0, 5)
+    call @sa_fenwick_set(&fen, 1, 3)
+    call @sa_fenwick_set(&fen, 2, 2)
+    pref1 = call @sa_fenwick_prefix(&fen, 1)
+    range0 = call @sa_fenwick_range(&fen, 0, 2)
+    point2 = call @sa_fenwick_get(&fen, 2)
+    ok0 = eq got7, 70
+    ok1 = eq got3, 30
+    ok2 = eq got0, 0
+    ok3 = eq pref1, 8
+    ok4 = eq range0, 10
+    ok5 = eq point2, 2
+    pair0 = and ok0, ok1
+    pair1 = and ok2, ok3
+    pair2 = and ok4, ok5
+    ok = and pair0, pair1
+    ok = and ok, pair2
+    !got7
+    !got3
+    !got0
+    !pref1
+    !range0
+    !point2
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !pair0
+    !pair1
+    !pair2
+    br ok -> L_HT_OK, L_HT_ERR
+
+L_HT_OK:
+    !table
+    !fen
+    !ok
+    return
+
+L_HT_ERR:
+    !table
+    !fen
+    !ok
+    panic(303)
+
+@test "data structures bloom filter"():
+L_ENTRY:
+    bf = call @sa_bloom_filter_new(256, 3)
+    call @sa_bloom_filter_insert(&bf, 11)
+    call @sa_bloom_filter_insert(&bf, 22)
+    call @sa_bloom_filter_insert(&bf, 33)
+    has11 = call @sa_bloom_filter_contains(&bf, 11)
+    has22 = call @sa_bloom_filter_contains(&bf, 22)
+    has99 = call @sa_bloom_filter_contains(&bf, 99)
+    ok0 = eq has11, 1
+    ok1 = eq has22, 1
+    ok2 = eq has99, 0
+    pair0 = and ok0, ok1
+    ok = and pair0, ok2
+    !has11
+    !has22
+    !has99
+    !ok0
+    !ok1
+    !ok2
+    !pair0
+    br ok -> L_BF_OK, L_BF_ERR
+
+L_BF_OK:
+    !bf
+    !ok
+    return
+
+L_BF_ERR:
+    !bf
+    !ok
+    panic(311)
+
+@test "data structures count min sketch"():
+L_ENTRY:
+    cms = call @sa_count_min_sketch_new(32, 4)
+    call @sa_count_min_sketch_increment(&cms, 10)
+    call @sa_count_min_sketch_increment_by(&cms, 10, 2)
+    call @sa_count_min_sketch_increment(&cms, 99)
+    c10 = call @sa_count_min_sketch_get_count(&cms, 10)
+    c99 = call @sa_count_min_sketch_get_count(&cms, 99)
+    ok0 = uge c10, 3
+    ok1 = uge c99, 1
+    ok = and ok0, ok1
+    !c10
+    !c99
+    !ok0
+    !ok1
+    br ok -> L_CMS_OK, L_CMS_ERR
+
+L_CMS_OK:
+    !cms
+    !ok
+    return
+
+L_CMS_ERR:
+    !cms
+    !ok
+    panic(312)
+
+@const SEG_VT_U64 = vtable { cmp = @cmp_u64_asc }
+
+@test "data structures trie"():
+L_ENTRY:
+    trie = call @sa_trie_new()
+    s1_data = stack_alloc 3
+    store s1_data+0, 97 as u8
+    store s1_data+1, 98 as u8
+    store s1_data+2, 99 as u8
+    s1 = stack_alloc 16
+    __addr2 = ptr_add s1, Slice_ptr
+    store __addr2+0, s1_data as ptr
+    !__addr2
+    __addr2 = ptr_add s1, Slice_len
+    store __addr2+0, 3 as u64
+    !__addr2
+    
+    call @sa_trie_insert(&trie, &s1)
+    found1 = call @sa_trie_search(&trie, &s1)
+    
+    s2_data = stack_alloc 2
+    store s2_data+0, 97 as u8
+    store s2_data+1, 98 as u8
+    s2 = stack_alloc 16
+    __addr2 = ptr_add s2, Slice_ptr
+    store __addr2+0, s2_data as ptr
+    !__addr2
+    __addr2 = ptr_add s2, Slice_len
+    store __addr2+0, 2 as u64
+    !__addr2
+    
+    found2 = call @sa_trie_search(&trie, &s2)
+    sw2 = call @sa_trie_starts_with(&trie, &s2)
+    
+    ok0 = eq found1, 1
+    ok1 = eq found2, 0
+    ok2 = eq sw2, 1
+    pair = and ok0, ok1
+    ok = and pair, ok2
+    
+    !found1
+    !found2
+    !sw2
+    !ok0
+    !ok1
+    !ok2
+    !pair
+    br ok -> L_TRIE_OK, L_TRIE_ERR
+
+L_TRIE_OK:
+    call @sa_trie_free(^trie)
+    !ok
+    return
+
+L_TRIE_ERR:
+    call @sa_trie_free(^trie)
+    !ok
+    panic(313)
+
+@test "data structures avl tree"():
+L_ENTRY:
+    avl = call @sa_avl_new()
+    call @sa_avl_insert(&avl, 10)
+    call @sa_avl_insert(&avl, 20)
+    call @sa_avl_insert(&avl, 30)
+    
+    __addr = ptr_add avl, AVL_root
+    root = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add root, AVLNode_value
+    val = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add root, AVLNode_height
+    h = load __addr+0 as i32
+    !__addr
+    
+    ok0 = eq val, 20
+    ok1 = eq h, 2
+    ok = and ok0, ok1
+    
+    !val
+    !h
+    !ok0
+    !ok1
+    !root
+    br ok -> L_AVL_OK, L_AVL_ERR
+
+L_AVL_OK:
+    call @sa_avl_free(^avl)
+    !ok
+    return
+
+L_AVL_ERR:
+    call @sa_avl_free(^avl)
+    !ok
+    panic(314)
+
+@test "data structures skip list"():
+L_ENTRY:
+    sl = call @sa_skip_list_new()
+    call @sa_skip_list_insert(&sl, 10)
+    call @sa_skip_list_insert(&sl, 30)
+    call @sa_skip_list_insert(&sl, 20)
+    
+    found20 = call @sa_skip_list_search(&sl, 20)
+    found40 = call @sa_skip_list_search(&sl, 40)
+    
+    ok0 = eq found20, 1
+    ok1 = eq found40, 0
+    ok = and ok0, ok1
+    
+    !found20
+    !found40
+    !ok0
+    !ok1
+    br ok -> L_SL_OK, L_SL_ERR
+
+L_SL_OK:
+    call @sa_skip_list_free(^sl)
+    !ok
+    return
+
+L_SL_ERR:
+    call @sa_skip_list_free(^sl)
+    !ok
+    panic(315)
+
+@test "data structures treap"():
+L_ENTRY:
+    tr = call @sa_treap_new(12345)
+    call @sa_treap_insert(&tr, 10)
+    call @sa_treap_insert(&tr, 20)
+    call @sa_treap_insert(&tr, 5)
+    
+
+    call @sa_treap_free(^tr)
+    return
+
+@test "data structures sparse table"():
+L_ENTRY:
+    src_data = stack_alloc 40
+    store src_data+0, 5 as u64
+    store src_data+8, 2 as u64
+    store src_data+16, 9 as u64
+    store src_data+24, 1 as u64
+    store src_data+32, 7 as u64
+    src = stack_alloc 16
+    __addr2 = ptr_add src, Slice_ptr
+    store __addr2+0, src_data as ptr
+    !__addr2
+    __addr2 = ptr_add src, Slice_len
+    store __addr2+0, 5 as u64
+    !__addr2
+    
+    st = call @sa_sparse_table_new(&src)
+    min02 = call @sa_sparse_table_query(&st, 0, 2)
+    min14 = call @sa_sparse_table_query(&st, 1, 4)
+    
+    ok0 = eq min02, 2
+    ok1 = eq min14, 1
+    ok = and ok0, ok1
+    
+    !min02
+    !min14
+    !ok0
+    !ok1
+    br ok -> L_ST_OK, L_ST_ERR
+
+L_ST_OK:
+    call @sa_sparse_table_free(^st)
+    !ok
+    return
+
+L_ST_ERR:
+    call @sa_sparse_table_free(^st)
+    !ok
+    panic(316)
+
+@test "data structures lazy segment tree"():
+L_ENTRY:
+    src_data = stack_alloc 40
+    store src_data+0, 1 as u64
+    store src_data+8, 2 as u64
+    store src_data+16, 3 as u64
+    store src_data+24, 4 as u64
+    store src_data+32, 5 as u64
+    src = stack_alloc 16
+    __addr2 = ptr_add src, Slice_ptr
+    store __addr2+0, src_data as ptr
+    !__addr2
+    __addr2 = ptr_add src, Slice_len
+    store __addr2+0, 5 as u64
+    !__addr2
+    
+    lst = call @sa_lazy_seg_new(&src)
+
+    call @sa_lazy_seg_update(&lst, 1, 3, 10)
+    
+    sum13 = call @sa_lazy_seg_query(&lst, 1, 3)
+    sum04 = call @sa_lazy_seg_query(&lst, 0, 4)
+    
+    ok0 = eq sum13, 39
+    ok1 = eq sum04, 45
+    ok = and ok0, ok1
+    
+    !sum13
+    !sum04
+    !ok0
+    !ok1
+    br ok -> L_LST_OK, L_LST_ERR
+
+L_LST_OK:
+    call @sa_lazy_seg_free(^lst)
+    !ok
+    return
+
+L_LST_ERR:
+    call @sa_lazy_seg_free(^lst)
+    !ok
+    panic(317)
+
+@test "sorting heap merge sort"():
+L_ENTRY:
+    data1 = stack_alloc 24
+    store data1+0, 3 as u64
+    store data1+8, 1 as u64
+    store data1+16, 2 as u64
+    s1 = stack_alloc 16
+    __addr2 = ptr_add s1, Slice_ptr
+    store __addr2+0, data1 as ptr
+    !__addr2
+    __addr2 = ptr_add s1, Slice_len
+    store __addr2+0, 3 as u64
+    !__addr2
+    
+    call @sa_heap_sort(&s1)
+    
+    data2 = stack_alloc 24
+    store data2+0, 5 as u64
+    store data2+8, 4 as u64
+    store data2+16, 6 as u64
+    s2 = stack_alloc 16
+    __addr2 = ptr_add s2, Slice_ptr
+    store __addr2+0, data2 as ptr
+    !__addr2
+    __addr2 = ptr_add s2, Slice_len
+    store __addr2+0, 3 as u64
+    !__addr2
+    
+    call @sa_merge_sort(&s2)
+    
+    v1_0 = load data1+0 as u64
+    v2_0 = load data2+0 as u64
+    ok0 = eq v1_0, 1
+    ok1 = eq v2_0, 4
+    ok = and ok0, ok1
+    
+    !v1_0
+    !v2_0
+    !ok0
+    !ok1
+    br ok -> L_SORT_OK, L_SORT_ERR
+
+L_SORT_OK:
+    !ok
+    return
+
+L_SORT_ERR:
+    !ok
+    panic(318)
+
+@test "searching quick select"():
+L_ENTRY:
+    data = stack_alloc 40
+    store data+0, 5 as u64
+    store data+8, 2 as u64
+    store data+16, 9 as u64
+    store data+24, 1 as u64
+    store data+32, 7 as u64
+    s = stack_alloc 16
+    __addr2 = ptr_add s, Slice_ptr
+    store __addr2+0, data as ptr
+    !__addr2
+    __addr2 = ptr_add s, Slice_len
+    store __addr2+0, 5 as u64
+    !__addr2
+    
+
+    res = call @sa_quick_select(&s, 1)
+    ok = eq res, 2
+    !res
+    br ok -> L_QS_OK, L_QS_ERR
+L_QS_OK:
+    !ok
+    return
+L_QS_ERR:
+    !ok
+    panic(319)
+
+@test "sorting counting radix sort"():
+L_ENTRY:
+    data = stack_alloc 24
+    store data+0, 10 as u64
+    store data+8, 2 as u64
+    store data+16, 5 as u64
+    s = stack_alloc 16
+    __addr2 = ptr_add s, Slice_ptr
+    store __addr2+0, data as ptr
+    !__addr2
+    __addr2 = ptr_add s, Slice_len
+    store __addr2+0, 3 as u64
+    !__addr2
+    
+    call @sa_counting_sort(&s, 10)
+    v0 = load data+0 as u64
+    ok0 = eq v0, 2
+    
+    data2 = stack_alloc 24
+    store data2+0, 170 as u64
+    store data2+8, 45 as u64
+    store data2+16, 75 as u64
+    s2 = stack_alloc 16
+    __addr2 = ptr_add s2, Slice_ptr
+    store __addr2+0, data2 as ptr
+    !__addr2
+    __addr2 = ptr_add s2, Slice_len
+    store __addr2+0, 3 as u64
+    !__addr2
+    
+    call @sa_radix_sort(&s2)
+    v2_0 = load data2+0 as u64
+    ok1 = eq v2_0, 45
+    
+    ok = and ok0, ok1
+    !v0
+    !v2_0
+    br ok -> L_SORT2_OK, L_SORT2_ERR
+L_SORT2_OK:
+    !ok
+    return
+L_SORT2_ERR:
+    !ok
+    panic(320)
+
+@test "searching exp inter search"():
+L_ENTRY:
+    data = stack_alloc 40
+    store data+0, 1 as u64
+    store data+8, 2 as u64
+    store data+16, 5 as u64
+    store data+24, 7 as u64
+    store data+32, 9 as u64
+    s = stack_alloc 16
+    __addr2 = ptr_add s, Slice_ptr
+    store __addr2+0, data as ptr
+    !__addr2
+    __addr2 = ptr_add s, Slice_len
+    store __addr2+0, 5 as u64
+    !__addr2
+    
+    res1 = call @sa_exponential_search(&s, 7)
+    res2 = call @sa_interpolation_search(&s, 5)
+    
+    ok0 = eq res1, 3
+    ok1 = eq res2, 2
+    ok = and ok0, ok1
+    
+    !res1
+    !res2
+    br ok -> L_S_OK, L_S_ERR
+L_S_OK:
+    !ok
+    return
+L_S_ERR:
+    !ok
+    panic(321)

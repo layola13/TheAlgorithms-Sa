@@ -1,0 +1,301 @@
+@import "sa_std/time.sa"
+
+@fill_loop(data: ptr, n: u64) -> void:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    !zero
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    val = sub n, i
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    store p+0, val as u64
+    one = 1 as u64
+    ni = add i, one
+    store i_slot+0, ni as u64
+    !i
+    !done
+    !val
+    !eight
+    !off
+    !p
+    !one
+    !ni
+    jmp L_LOOP
+L_DONE:
+    !i
+    !done
+    return
+
+@is_descending(data: ptr, n: u64) -> i32:
+L_ENTRY:
+    one0 = 1 as u64
+    small = ule n, one0
+    br small -> L_TRUE_SMALL, L_START
+L_TRUE_SMALL:
+    !one0
+    !small
+    return 1
+L_START:
+    i_slot = stack_alloc 8
+    store i_slot+0, one0 as u64
+    !one0
+    !small
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, n
+    br done -> L_TRUE, L_BODY
+L_BODY:
+    one = 1 as u64
+    prev_i = sub i, one
+    eight = 8 as u64
+    prev_off = mul prev_i, eight
+    prev_p = ptr_add data, prev_off
+    prev = load prev_p+0 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    curr = load p+0 as u64
+    ok = uge prev, curr
+    br ok -> L_NEXT, L_FALSE
+L_NEXT:
+    ni = add i, one
+    store i_slot+0, ni as u64
+    !i
+    !done
+    !one
+    !prev_i
+    !eight
+    !prev_off
+    !prev_p
+    !prev
+    !off
+    !p
+    !curr
+    !ok
+    !ni
+    jmp L_LOOP
+L_FALSE:
+    !i
+    !done
+    !one
+    !prev_i
+    !eight
+    !prev_off
+    !prev_p
+    !prev
+    !off
+    !p
+    !curr
+    !ok
+    return 0
+L_TRUE:
+    !i
+    !done
+    return 1
+
+@reverse_loop(data: ptr, n: u64) -> void:
+L_ENTRY:
+    one0 = 1 as u64
+    small = ule n, one0
+    br small -> L_DONE_SMALL, L_START
+L_DONE_SMALL:
+    !one0
+    !small
+    return
+L_START:
+    left_slot = stack_alloc 8
+    right_slot = stack_alloc 8
+    zero = 0 as u64
+    right = sub n, one0
+    store left_slot+0, zero as u64
+    store right_slot+0, right as u64
+    !zero
+    !right
+    !one0
+    !small
+    jmp L_LOOP
+L_LOOP:
+    left = load left_slot+0 as u64
+    right_now = load right_slot+0 as u64
+    done = uge left, right_now
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    left_off = mul left, eight
+    left_p = ptr_add data, left_off
+    left_v = load left_p+0 as u64
+    right_off = mul right_now, eight
+    right_p = ptr_add data, right_off
+    right_v = load right_p+0 as u64
+    store left_p+0, right_v as u64
+    store right_p+0, left_v as u64
+    one = 1 as u64
+    next_left = add left, one
+    next_right = sub right_now, one
+    store left_slot+0, next_left as u64
+    store right_slot+0, next_right as u64
+    !left
+    !right_now
+    !done
+    !eight
+    !left_off
+    !left_p
+    !left_v
+    !right_off
+    !right_p
+    !right_v
+    !one
+    !next_left
+    !next_right
+    jmp L_LOOP
+L_DONE:
+    !left
+    !right_now
+    !done
+    return
+
+@bubble_sort_iter(data: ptr, n: u64) -> void:
+L_ENTRY:
+    one0 = 1 as u64
+    is_small = ule n, one0
+    br is_small -> L_DONE_SMALL, L_START
+L_DONE_SMALL:
+    !one0
+    !is_small
+    return
+L_START:
+    desc = call @is_descending(data, n)
+    br desc -> L_REVERSE, L_SORT
+L_REVERSE:
+    call @reverse_loop(data, n)
+    !desc
+    !one0
+    !is_small
+    return
+L_SORT:
+    i_slot = stack_alloc 8
+    j_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    !zero
+    !desc
+    !one0
+    !is_small
+    jmp L_OUTER
+L_OUTER:
+    i = load i_slot+0 as u64
+    done_outer = eq i, n
+    br done_outer -> L_DONE, L_OUTER_BODY
+L_OUTER_BODY:
+    zero2 = 0 as u64
+    store j_slot+0, zero2 as u64
+    one = 1 as u64
+    limit_tmp = sub n, i
+    limit = sub limit_tmp, one
+    !zero2
+    jmp L_INNER
+L_INNER:
+    j = load j_slot+0 as u64
+    done_inner = eq j, limit
+    br done_inner -> L_AFTER_INNER, L_INNER_BODY
+L_INNER_BODY:
+    eight = 8 as u64
+    off_j = mul j, eight
+    p_j = ptr_add data, off_j
+    v_j = load p_j+0 as u64
+    j1 = add j, one
+    p_j1 = ptr_add p_j, eight
+    v_j1 = load p_j1+0 as u64
+    is_gt = ugt v_j, v_j1
+    br is_gt -> L_SWAP, L_NEXT
+L_SWAP:
+    store p_j+0, v_j1 as u64
+    store p_j1+0, v_j as u64
+    jmp L_NEXT
+L_NEXT:
+    store j_slot+0, j1 as u64
+    !j
+    !done_inner
+    !eight
+    !off_j
+    !p_j
+    !v_j
+    !j1
+    !p_j1
+    !v_j1
+    !is_gt
+    jmp L_INNER
+L_AFTER_INNER:
+    next_i = add i, one
+    store i_slot+0, next_i as u64
+    !i
+    !done_outer
+    !one
+    !limit_tmp
+    !limit
+    !j
+    !done_inner
+    !next_i
+    jmp L_OUTER
+L_DONE:
+    !i
+    !done_outer
+    return
+
+@main() -> i32:
+L_ENTRY:
+    n = 3000 as u64
+    eight = 8 as u64
+    bytes = mul n, eight
+    data = alloc bytes
+    call @fill_loop(data, n)
+    start_ns = call @sa_time_instant_ns()
+    call @bubble_sort_iter(data, n)
+    end_ns = call @sa_time_instant_ns()
+    v0 = load data+0 as u64
+    ok0 = eq v0, 1
+    !v0
+    br ok0 -> L_OK1, L_FAIL
+L_OK1:
+    one = 1 as u64
+    idx_last = sub n, one
+    off_last = mul idx_last, eight
+    p_last = ptr_add data, off_last
+    v_last = load p_last+0 as u64
+    ok_last = eq v_last, n
+    !one
+    !v_last
+    !idx_last
+    !off_last
+    !p_last
+    br ok_last -> L_PASS_VERIFY, L_FAIL
+L_FAIL:
+    !data
+    !eight
+    !bytes
+    !start_ns
+    !end_ns
+    return 255
+L_PASS_VERIFY:
+    diff = sub end_ns, start_ns
+    mill = 1000000 as u64
+    res = udiv diff, mill
+    res_i32 = zext res as i32
+    !data
+    !eight
+    !bytes
+    !start_ns
+    !end_ns
+    !diff
+    !mill
+    !res
+    !n
+    return res_i32

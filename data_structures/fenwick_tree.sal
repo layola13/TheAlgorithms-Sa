@@ -1,0 +1,5 @@
+#def Fenwick_SIZE = 24
+#def Fenwick_data = +0
+#def Fenwick_cap = +8
+#def Fenwick_len = +16
+#def Fenwick_SLOT_SIZE = 8

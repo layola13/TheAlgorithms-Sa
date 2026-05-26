@@ -1,0 +1,59 @@
+@import "../searching/linear_search.sa"
+@import "../searching/binary_search.sa"
+@import "../searching/fibonacci_search.sa"
+@import "../searching/interpolation_search.sa"
+@import "../searching/jump_search.sa"
+@import "../searching/moore_voting.sa"
+@import "../searching/quick_select.sa"
+
+@test "search linear"():
+L_ENTRY:
+    data = stack_alloc 16
+    store data+0, 10 as u64
+    store data+8, 20 as u64
+    s = stack_alloc 16
+    store s+0, data as ptr
+    store s+8, 2 as u64
+    res = call @sa_linear_search_u64(&s, 20)
+    ok = eq res, 1
+    !res
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(301)
+
+@test "search binary"():
+L_ENTRY:
+    data = stack_alloc 16
+    store data+0, 10 as u64
+    store data+8, 20 as u64
+    s = stack_alloc 16
+    store s+0, data as ptr
+    store s+8, 2 as u64
+    res = call @sa_binary_search_u64(&s, 20)
+    ok = eq res, 1
+    !res
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(302)
+
+@test "search moore"():
+L_ENTRY:
+    data = stack_alloc 24
+    store data+0, 1 as u64
+    store data+8, 2 as u64
+    store data+16, 1 as u64
+    s = stack_alloc 16
+    store s+0, data as ptr
+    store s+8, 3 as u64
+    res = call @sa_moore_voting(&s)
+    ok = eq res, 1
+    !res
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(303)

@@ -1,0 +1,12 @@
+#def RBNode_value = +0
+#def RBNode_color = +8
+#def RBNode_left = +16
+#def RBNode_right = +24
+#def RBNode_parent = +32
+#def RBNode_SIZE = 40
+
+#def RBCOLOR_RED = 0
+#def RBCOLOR_BLACK = 1
+
+#def RBTree_root = +0
+#def RBTree_SIZE = 8

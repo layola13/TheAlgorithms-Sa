@@ -1,0 +1,151 @@
+@import "sa_std/vec.sal"
+@import "sa_std/vec.sa"
+@import "hash_table.sal"
+
+@ht_keys(&table: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add table, HashTable_keys
+    keys = load __addr+0 as ptr
+    !__addr
+    return keys
+
+@ht_values(&table: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add table, HashTable_values
+    values = load __addr+0 as ptr
+    !__addr
+    return values
+
+@ht_vec_get(&vec: ptr, index: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add vec, Vec_ptr
+    base = load __addr+0 as ptr
+    !__addr
+    off = mul index, 8
+    ip = ptr_add base, off
+    value = load ip+0 as u64
+    return value
+
+@ht_vec_set(&vec: ptr, index: u64, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add vec, Vec_ptr
+    base = load __addr+0 as ptr
+    !__addr
+    off = mul index, 8
+    ip = ptr_add base, off
+    store ip+0, value as u64
+    return
+
+@ht_find_index_from(&keys: ptr, key: u64, index: u64, len: u64) -> u64:
+L_ENTRY:
+    done = eq index, len
+    br done -> L_MISS, L_BODY
+
+L_BODY:
+    current = call @ht_vec_get(&keys, index)
+    hit = eq current, key
+    br hit -> L_HIT, L_NEXT
+
+L_NEXT:
+    next_index = add index, 1
+    next = call @ht_find_index_from(&keys, key, next_index, len)
+    return next
+
+L_HIT:
+    return index
+
+L_MISS:
+    return len
+
+@ht_find_index(&table: ptr, key: u64) -> u64:
+L_ENTRY:
+    keys = call @ht_keys(&table)
+    len = call @sa_vec_len(&keys)
+    found = call @ht_find_index_from(&keys, key, 0, len)
+    return found
+
+@export sa_hash_table_new() -> ^ptr:
+L_ENTRY:
+    table = alloc HashTable_SIZE
+    keys = call @sa_vec_new()
+    values = call @sa_vec_new()
+    __addr2 = ptr_add table, HashTable_keys
+    store __addr2+0, keys as ptr
+    !__addr2
+    __addr2 = ptr_add table, HashTable_values
+    store __addr2+0, values as ptr
+    !__addr2
+    return table
+
+@export sa_hash_table_free(^table: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add table, HashTable_keys
+    keys = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add table, HashTable_values
+    values = load __addr+0 as ptr
+    !__addr
+    call @sa_vec_free(^keys)
+    call @sa_vec_free(^values)
+    return
+
+@export sa_hash_table_len(&table: ptr) -> u64:
+L_ENTRY:
+    keys = call @ht_keys(&table)
+    len = call @sa_vec_len(&keys)
+    return len
+
+@export sa_hash_table_capacity(&table: ptr) -> u64:
+L_ENTRY:
+    keys = call @ht_keys(&table)
+    cap = call @sa_vec_capacity(&keys)
+    return cap
+
+@export sa_hash_table_is_empty(&table: ptr) -> i32:
+L_ENTRY:
+    len = call @sa_hash_table_len(&table)
+    empty = eq len, 0
+    result = empty as i32
+    return result
+
+@export sa_hash_table_insert(&table: ptr, key: u64, value: u64) -> void:
+L_ENTRY:
+    keys = call @ht_keys(&table)
+    values = call @ht_values(&table)
+    idx = call @ht_find_index(&table, key)
+    len = call @sa_vec_len(&keys)
+    found = ult idx, len
+    br found -> L_UPDATE, L_APPEND
+
+L_UPDATE:
+    call @ht_vec_set(&values, idx, value)
+    return
+
+L_APPEND:
+    keys = call @sa_vec_push(^keys, key, 8)
+    values = call @sa_vec_push(^values, value, 8)
+    __addr2 = ptr_add table, HashTable_keys
+    store __addr2+0, keys as ptr
+    !__addr2
+    __addr2 = ptr_add table, HashTable_values
+    store __addr2+0, values as ptr
+    !__addr2
+    !values
+    !keys
+    return
+
+@export sa_hash_table_get(&table: ptr, key: u64) -> u64:
+L_ENTRY:
+    keys = call @ht_keys(&table)
+    values = call @ht_values(&table)
+    idx = call @ht_find_index(&table, key)
+    len = call @sa_vec_len(&keys)
+    found = ult idx, len
+    br found -> L_HIT, L_MISS
+
+L_HIT:
+    value = call @ht_vec_get(&values, idx)
+    return value
+
+L_MISS:
+    return 0

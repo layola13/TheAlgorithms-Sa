@@ -1,0 +1,6 @@
+#def TrieNode_is_end = +0
+#def TrieNode_children = +8
+#def TrieNode_SIZE = 216
+
+#def Trie_root = +0
+#def Trie_SIZE = 8

@@ -1,0 +1,18 @@
+@import "../data_structures/lru_cache.sa"
+
+@test "lru"():
+L_ENTRY:
+    l = call @sa_lru_new(2)
+    call @sa_lru_put(&l, 1, 10)
+    call @sa_lru_put(&l, 2, 20)
+    v = call @sa_lru_get(&l, 1)
+    ok = eq v, 10
+    !v
+    call @sa_lru_free(^l)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    !ok
+    return
+L_FAIL:
+    !ok
+    panic(103)

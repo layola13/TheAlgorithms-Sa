@@ -1,0 +1,241 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+@import "sparse_table.sal"
+
+@st_log2(n: u64, res: u64) -> u64:
+L_ENTRY:
+    z = 0 as u64
+    iz = eq n, z
+    br iz -> L_DONE, L_BODY
+L_BODY:
+    two = 2 as u64
+    nn = udiv n, two
+    one = 1 as u64
+    nr = add res, one
+    fr = call @st_log2(nn, nr)
+    !z
+    !iz
+    !two
+    !one
+    return fr
+L_DONE:
+    !z
+    !iz
+    return res
+
+@export sa_sparse_table_new(&src: ptr) -> ^ptr:
+L_ENTRY:
+    n = load src+Slice_len as u64
+    sd = load src+Slice_ptr as ptr
+    zero = 0 as u64
+    ln = call @st_log2(n, zero)
+    
+    st = alloc SparseTable_SIZE
+    store st+SparseTable_n, n as u64
+    store st+SparseTable_log_n, ln as u64
+    
+    tc = mul n, ln
+    eight = 8 as u64
+    bytes = mul tc, eight
+    td = alloc bytes
+    store st+SparseTable_data, td as ptr
+    
+    call @st_fill_0(&td, &sd, zero, n)
+    
+    one = 1 as u64
+    call @st_fill_levels(&td, one, ln, n)
+    
+    !zero
+    !one
+    !tc
+    !eight
+    !bytes
+    !src
+    return st
+
+@st_fill_0(&td: ptr, &sd: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    sp = ptr_add sd, off
+    val = load sp+0 as u64
+    dp = ptr_add td, off
+    store dp+0, val as u64
+    one = 1 as u64
+    ni = add i, one
+    call @st_fill_0(&td, &sd, ni, n)
+    !eight
+    !off
+    !sp
+    !val
+    !dp
+    !one
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@st_fill_levels(&td: ptr, j: u64, ln: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq j, ln
+    br done -> L_DONE, L_BODY
+L_BODY:
+    zero = 0 as u64
+    call @st_fill_i(&td, j, zero, n)
+    one = 1 as u64
+    nj = add j, one
+    call @st_fill_levels(&td, nj, ln, n)
+    !zero
+    !one
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@st_fill_i(&td: ptr, j: u64, i: u64, n: u64) -> void:
+L_ENTRY:
+    one = 1 as u64
+    pj = sub j, one
+    range = shl one, pj
+    full = shl one, j
+    limit = add i, full
+    done = ugt limit, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    o1 = mul pj, n
+    o1 = add o1, i
+    o1 = mul o1, eight
+    p1 = ptr_add td, o1
+    v1 = load p1+0 as u64
+    
+    is = add i, range
+    o2 = mul pj, n
+    o2 = add o2, is
+    o2 = mul o2, eight
+    p2 = ptr_add td, o2
+    v2 = load p2+0 as u64
+    
+    lt = ult v1, v2
+    br lt -> L_V1, L_V2
+L_V1:
+    mv1 = v1
+    !v2
+    jmp L_SET
+L_V2:
+    mv1 = v2
+    !v1
+    jmp L_SET
+L_SET:
+    o = mul j, n
+    o = add o, i
+    o = mul o, eight
+    dp = ptr_add td, o
+    store dp+0, mv1 as u64
+    
+    ni = add i, one
+    call @st_fill_i(&td, j, ni, n)
+    !one
+    !pj
+    !range
+    !full
+    !limit
+    !eight
+    !o1
+    !is
+    !o2
+    !lt
+    !mv1
+    !o
+    !dp
+    !done
+    return
+L_DONE:
+    !one
+    !pj
+    !range
+    !full
+    !limit
+    !done
+    return
+
+@export sa_sparse_table_query(&st: ptr, l: u64, r: u64) -> u64:
+L_ENTRY:
+    n = load st+SparseTable_n as u64
+    td = load st+SparseTable_data as ptr
+    len = sub r, l
+    one = 1 as u64
+    len = add len, one
+    zero = 0 as u64
+    k = call @st_log2_floor(len, zero)
+    
+    eight = 8 as u64
+    o1 = mul k, n
+    o1 = add o1, l
+    o1 = mul o1, eight
+    p1 = ptr_add td, o1
+    v1 = load p1+0 as u64
+    
+    rk = shl one, k
+    i2 = sub r, rk
+    i2 = add i2, one
+    o2 = mul k, n
+    o2 = add o2, i2
+    o2 = mul o2, eight
+    p2 = ptr_add td, o2
+    v2 = load p2+0 as u64
+    
+    lt = ult v1, v2
+    !n
+    !td
+    !len
+    !one
+    !zero
+    !k
+    !eight
+    !o1
+    !rk
+    !i2
+    !o2
+    br lt -> L_RET1, L_RET2
+L_RET1:
+    !v2
+    !lt
+    !st
+    return v1
+L_RET2:
+    !v1
+    !lt
+    !st
+    return v2
+
+@st_log2_floor(len: u64, res: u64) -> u64:
+L_ENTRY:
+    one = 1 as u64
+    done = eq len, one
+    br done -> L_DONE, L_BODY
+L_BODY:
+    two = 2 as u64
+    nl = udiv len, two
+    nr = add res, one
+    fr = call @st_log2_floor(nl, nr)
+    !one
+    !done
+    !two
+    return fr
+L_DONE:
+    !one
+    !done
+    return res
+
+@export sa_sparse_table_free(^st: ptr) -> void:
+L_ENTRY:
+    td = load st+SparseTable_data as ptr
+    !td
+    !st
+    return

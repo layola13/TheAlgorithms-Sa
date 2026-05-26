@@ -1,0 +1,19 @@
+@import "../sorting/bubble_sort.sa"
+@import "../sorting/insertion_sort.sa"
+@import "../sorting/selection_sort.sa"
+
+@test "sorting basic"():
+L_ENTRY:
+    d = stack_alloc 16
+    store d+0, 2 as u64
+    store d+8, 1 as u64
+    s = stack_alloc 16
+    store s+0, d as ptr
+    store s+8, 2 as u64
+    call @sa_bubble_sort(&s)
+    
+    v0 = load d+0 as u64
+    ok = eq v0, 1
+    !v0
+    !ok
+    return

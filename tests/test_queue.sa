@@ -1,0 +1,14 @@
+@import "../data_structures/queue.sa"
+@test "queue"():
+L_ENTRY:
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 10)
+    v = call @sa_queue_dequeue(&q)
+    ok = eq v, 10
+    !v
+    call @sa_queue_free(^q)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(402)

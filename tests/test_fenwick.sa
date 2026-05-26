@@ -1,0 +1,17 @@
+@import "../data_structures/fenwick_tree.sa"
+
+@test "fenwick"():
+L_ENTRY:
+    f = call @sa_fenwick_new(10)
+    call @sa_fenwick_update(&f, 2, 5)
+    res = call @sa_fenwick_prefix(&f, 2)
+    ok = eq res, 5
+    !res
+    call @sa_fenwick_free(^f)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    !ok
+    return
+L_FAIL:
+    !ok
+    panic(103)

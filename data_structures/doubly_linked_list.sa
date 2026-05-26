@@ -1,0 +1,152 @@
+@import "sa_std/core/mem.sa"
+@import "doubly_linked_list.sal"
+
+@dll_node_new(key: u64, value: u64) -> ^ptr:
+L_ENTRY:
+    node = alloc DLLNode_SIZE
+    __addr2 = ptr_add node, DLLNode_key
+    store __addr2+0, key as u64
+    !__addr2
+    __addr2 = ptr_add node, DLLNode_value
+    store __addr2+0, value as u64
+    !__addr2
+    __addr2 = ptr_add node, DLLNode_prev
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add node, DLLNode_next
+    store __addr2+0, 0 as ptr
+    !__addr2
+    return node
+
+@export sa_dll_new() -> ^ptr:
+L_ENTRY:
+    lp = alloc DLL_SIZE
+    __addr2 = ptr_add lp, DLL_head
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add lp, DLL_tail
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add lp, DLL_len
+    store __addr2+0, 0 as u64
+    !__addr2
+    return lp
+
+@export sa_dll_push_front(&list: ptr, key: u64, value: u64) -> ptr:
+L_ENTRY:
+    node = call @dll_node_new(key, value)
+    __addr = ptr_add list, DLL_head
+    head = load __addr+0 as ptr
+    !__addr
+    __addr2 = ptr_add node, DLLNode_next
+    store __addr2+0, head as ptr
+    !__addr2
+    is_null = eq head, 0
+    br is_null -> L_FIRST, L_NOT_FIRST
+L_FIRST:
+    __addr2 = ptr_add list, DLL_tail
+    store __addr2+0, node as ptr
+    !__addr2
+    jmp L_DONE
+L_NOT_FIRST:
+    __addr2 = ptr_add head, DLLNode_prev
+    store __addr2+0, node as ptr
+    !__addr2
+    jmp L_DONE
+L_DONE:
+    __addr2 = ptr_add list, DLL_head
+    store __addr2+0, node as ptr
+    !__addr2
+    __addr = ptr_add list, DLL_len
+    cl = load __addr+0 as u64
+    !__addr
+    nl = add cl, 1
+    __addr2 = ptr_add list, DLL_len
+    store __addr2+0, nl as u64
+    !__addr2
+    !head
+    !is_null
+    !cl
+    !nl
+    !list
+    return node
+
+@export sa_dll_remove_node(&list: ptr, ^node: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add node, DLLNode_prev
+    p = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add node, DLLNode_next
+    n = load __addr+0 as ptr
+    !__addr
+    
+    ih = eq p, 0
+    br ih -> L_IS_HEAD, L_NOT_HEAD
+L_IS_HEAD:
+    __addr2 = ptr_add list, DLL_head
+    store __addr2+0, n as ptr
+    !__addr2
+    jmp L_CHECK_TAIL
+L_NOT_HEAD:
+    __addr2 = ptr_add p, DLLNode_next
+    store __addr2+0, n as ptr
+    !__addr2
+    jmp L_CHECK_TAIL
+
+L_CHECK_TAIL:
+    it = eq n, 0
+    br it -> L_IS_TAIL, L_NOT_TAIL
+L_IS_TAIL:
+    __addr2 = ptr_add list, DLL_tail
+    store __addr2+0, p as ptr
+    !__addr2
+    jmp L_FINALIZE
+L_NOT_TAIL:
+    __addr2 = ptr_add n, DLLNode_prev
+    store __addr2+0, p as ptr
+    !__addr2
+    jmp L_FINALIZE
+
+L_FINALIZE:
+    __addr = ptr_add list, DLL_len
+    cl = load __addr+0 as u64
+    !__addr
+    nl = sub cl, 1
+    __addr2 = ptr_add list, DLL_len
+    store __addr2+0, nl as u64
+    !__addr2
+    !node
+    !p
+    !n
+    !ih
+    !it
+    !cl
+    !nl
+    !list
+    return
+
+@export sa_dll_free(^list: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add list, DLL_head
+    head = load __addr+0 as ptr
+    !__addr
+    call @dll_node_free_recursive(^head)
+    !list
+    return
+
+@dll_node_free_recursive(^node: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_DONE, L_BODY
+L_BODY:
+    __addr = ptr_add node, DLLNode_next
+    next = load __addr+0 as ptr
+    !__addr
+    call @dll_node_free_recursive(^next)
+    !node
+    !is_null
+    return
+L_DONE:
+    !node
+    !is_null
+    return

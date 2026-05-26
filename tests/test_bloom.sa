@@ -1,0 +1,17 @@
+@import "../data_structures/probabilistic/bloom_filter.sa"
+
+@test "bloom filter"():
+L_ENTRY:
+    bf = call @sa_bloom_filter_new(1000, 3)
+    call @sa_bloom_filter_insert(&bf, 12345)
+    has = call @sa_bloom_filter_contains(&bf, 12345)
+    ok = eq has, 1
+    !has
+    call @sa_bloom_filter_free(^bf)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    !ok
+    return
+L_FAIL:
+    !ok
+    panic(103)

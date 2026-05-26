@@ -1,0 +1,18 @@
+@import "sa_std/hashmap.sa"
+
+@test "hashmap"():
+L_ENTRY:
+    m = call @sa_map_new()
+    k = 123 as ptr
+    v = 456 as ptr
+    call @sa_map_put(&m, &k, &v)
+    res_ptr = call @sa_map_get(&m, &k)
+    res = load res_ptr+0 as ptr
+    ok = eq res, v
+    !ok
+    !res
+    !res_ptr
+    !k
+    !v
+    call @sa_map_free(^m)
+    return

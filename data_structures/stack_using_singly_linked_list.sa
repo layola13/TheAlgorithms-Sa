@@ -1,0 +1,100 @@
+@import "linked_list.sa"
+@import "stack_using_singly_linked_list.sal"
+
+@export sa_stack_sll_new() -> ^ptr:
+L_ENTRY:
+    stack = alloc StackUsingSinglyLinkedList_SIZE
+    list = call @sa_linked_list_new()
+    __addr2 = ptr_add stack, StackUsingSinglyLinkedList_head
+    store __addr2+0, list as ptr
+    !__addr2
+    __addr2 = ptr_add stack, StackUsingSinglyLinkedList_len
+    store __addr2+0, 0 as u64
+    !__addr2
+    return stack
+
+@export sa_stack_sll_free(^stack: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_head
+    list = load __addr+0 as ptr
+    !__addr
+    call @sa_linked_list_free(^list)
+    !stack
+    return
+
+@export sa_stack_sll_len(&stack: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    !stack
+    return len
+
+@export sa_stack_sll_is_empty(&stack: ptr) -> i32:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    empty = eq len, 0
+    result = empty as i32
+    !len
+    !stack
+    return result
+
+@export sa_stack_sll_push(&stack: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_head
+    list = load __addr+0 as ptr
+    !__addr
+    call @sa_linked_list_push_front(&list, value)
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    next_len = add len, 1
+    __addr2 = ptr_add stack, StackUsingSinglyLinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !list
+    !value
+    !stack
+    return
+
+@export sa_stack_sll_peek(&stack: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_head
+    list = load __addr+0 as ptr
+    !__addr
+    value = call @sa_linked_list_front(&list)
+    !list
+    !stack
+    return value
+
+@export sa_stack_sll_pop(&stack: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_head
+    list = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add stack, StackUsingSinglyLinkedList_len
+    len = load __addr+0 as u64
+    !__addr
+    empty = eq len, 0
+    br empty -> L_POP_EMPTY, L_POP_READY
+
+L_POP_READY:
+    value = call @sa_linked_list_pop_front(&list)
+    next_len = sub len, 1
+    __addr2 = ptr_add stack, StackUsingSinglyLinkedList_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !empty
+    !list
+    !stack
+    return value
+
+L_POP_EMPTY:
+    !empty
+    !list
+    !stack
+    return 0

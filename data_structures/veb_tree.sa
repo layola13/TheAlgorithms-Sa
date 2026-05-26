@@ -1,0 +1,339 @@
+@import "sa_std/core/mem.sa"
+@import "veb_tree.sal"
+
+@veb_empty_value() -> u64:
+L_ENTRY:
+    value = sub 0, 1
+    return value
+
+@veb_clear_bytes(&base: ptr, index: u64, limit: u64) -> void:
+L_ENTRY:
+    done = uge index, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    slot = ptr_add base, index
+    store slot+0, 0 as u8
+    next = add index, 1
+    call @veb_clear_bytes(&base, next, limit)
+    !next
+    !done
+    return
+L_DONE:
+    !index
+    !limit
+    !base
+    !done
+    return
+
+@veb_find_next(&base: ptr, index: u64, limit: u64) -> u64:
+L_ENTRY:
+    done = uge index, limit
+    br done -> L_MISS, L_BODY
+L_BODY:
+    slot = ptr_add base, index
+    flag = load slot+0 as u8
+    hit = ne flag, 0
+    br hit -> L_HIT, L_NEXT
+L_NEXT:
+    next = add index, 1
+    result = call @veb_find_next(&base, next, limit)
+    !next
+    !flag
+    !hit
+    !done
+    return result
+L_HIT:
+    !flag
+    !hit
+    !limit
+    !done
+    return index
+L_MISS:
+    !index
+    !base
+    !done
+    return limit
+
+@veb_find_prev(&base: ptr, index: u64) -> u64:
+L_ENTRY:
+    slot = ptr_add base, index
+    flag = load slot+0 as u8
+    hit = ne flag, 0
+    br hit -> L_HIT, L_CHECK_ZERO
+L_CHECK_ZERO:
+    is_zero = eq index, 0
+    br is_zero -> L_MISS, L_PREV
+L_PREV:
+    prev = sub index, 1
+    result = call @veb_find_prev(&base, prev)
+    !prev
+    !flag
+    !hit
+    !is_zero
+    return result
+L_HIT:
+    !flag
+    !hit
+    return index
+L_MISS:
+    none = call @veb_empty_value()
+    !index
+    !flag
+    !hit
+    !is_zero
+    return none
+
+@export sa_veb_new(u: u64) -> ^ptr:
+L_ENTRY:
+    v = alloc VEB_SIZE
+    store v+VEB_u, u as u64
+    none = call @veb_empty_value()
+    store v+VEB_min, none as u64
+    store v+VEB_max, none as u64
+    store v+VEB_summary, 0 as ptr
+    data = alloc u
+    call @veb_clear_bytes(&data, 0, u)
+    store v+VEB_clusters, data as ptr
+    !data
+    !none
+    return v
+
+@export sa_veb_is_empty(&v: ptr) -> i32:
+L_ENTRY:
+    mn = load v+VEB_min as u64
+    none = call @veb_empty_value()
+    empty = eq mn, none
+    result = empty as i32
+    !mn
+    !none
+    return result
+
+@export sa_veb_min(&v: ptr) -> u64:
+L_ENTRY:
+    mn = load v+VEB_min as u64
+    return mn
+
+@export sa_veb_max(&v: ptr) -> u64:
+L_ENTRY:
+    mx = load v+VEB_max as u64
+    return mx
+
+@export sa_veb_search(&v: ptr, x: u64) -> i32:
+L_ENTRY:
+    u = load v+VEB_u as u64
+    out_of_range = uge x, u
+    br out_of_range -> L_NO, L_BODY
+L_BODY:
+    data = load v+VEB_clusters as ptr
+    slot = ptr_add data, x
+    flag = load slot+0 as u8
+    hit = ne flag, 0
+    result = hit as i32
+    !data
+    !flag
+    !u
+    !out_of_range
+    return result
+L_NO:
+    !x
+    !u
+    !out_of_range
+    return 0
+
+@export sa_veb_insert(&v: ptr, x: u64) -> void:
+L_ENTRY:
+    u = load v+VEB_u as u64
+    out_of_range = uge x, u
+    br out_of_range -> L_DONE_RANGE, L_BODY
+L_BODY:
+    data = load v+VEB_clusters as ptr
+    slot = ptr_add data, x
+    store slot+0, 1 as u8
+    mn = load v+VEB_min as u64
+    none = call @veb_empty_value()
+    empty = eq mn, none
+    br empty -> L_EMPTY, L_CHECK_MIN
+L_EMPTY:
+    store v+VEB_min, x as u64
+    stored = load v+VEB_min as u64
+    store v+VEB_max, stored as u64
+    !stored
+    !data
+    !mn
+    !none
+    !empty
+    !u
+    !out_of_range
+    return
+L_CHECK_MIN:
+    below = ult x, mn
+    br below -> L_SET_MIN, L_CHECK_MAX
+L_SET_MIN:
+    store v+VEB_min, x as u64
+    !below
+    !data
+    !mn
+    !none
+    !empty
+    !u
+    !out_of_range
+    return
+L_CHECK_MAX:
+    mx = load v+VEB_max as u64
+    above = ugt x, mx
+    br above -> L_SET_MAX, L_DONE
+L_SET_MAX:
+    store v+VEB_max, x as u64
+    !mx
+    !above
+    !below
+    !data
+    !mn
+    !none
+    !empty
+    !u
+    !out_of_range
+    return
+L_DONE:
+    !mx
+    !above
+    !below
+    !data
+    !mn
+    !none
+    !empty
+    !u
+    !out_of_range
+    return
+L_DONE_RANGE:
+    !x
+    !u
+    !out_of_range
+    return
+
+@export sa_veb_successor(&v: ptr, x: u64) -> u64:
+L_ENTRY:
+    mn = load v+VEB_min as u64
+    none = call @veb_empty_value()
+    empty = eq mn, none
+    br empty -> L_NONE, L_CHECK_BELOW
+L_CHECK_BELOW:
+    below_min = ult x, mn
+    br below_min -> L_RETURN_MIN, L_CHECK_MAX
+L_CHECK_MAX:
+    mx = load v+VEB_max as u64
+    at_or_above_max = uge x, mx
+    br at_or_above_max -> L_NONE_WITH_MAX, L_SCAN
+L_SCAN:
+    data = load v+VEB_clusters as ptr
+    u = load v+VEB_u as u64
+    start = add x, 1
+    found = call @veb_find_next(&data, start, u)
+    is_miss = eq found, u
+    br is_miss -> L_NONE_SCAN, L_FOUND
+L_FOUND:
+    !data
+    !u
+    !start
+    !is_miss
+    !mx
+    !at_or_above_max
+    !below_min
+    !mn
+    !none
+    !empty
+    return found
+L_NONE_SCAN:
+    !found
+    !data
+    !u
+    !start
+    !is_miss
+    !mx
+    !at_or_above_max
+    !below_min
+    !mn
+    !empty
+    return none
+L_NONE_WITH_MAX:
+    !mx
+    !at_or_above_max
+    !below_min
+    !mn
+    !empty
+    return none
+L_RETURN_MIN:
+    !below_min
+    !none
+    !empty
+    return mn
+L_NONE:
+    !mn
+    !empty
+    return none
+
+@export sa_veb_predecessor(&v: ptr, x: u64) -> u64:
+L_ENTRY:
+    mn = load v+VEB_min as u64
+    none = call @veb_empty_value()
+    empty = eq mn, none
+    br empty -> L_NONE, L_CHECK_MAX
+L_CHECK_MAX:
+    mx = load v+VEB_max as u64
+    above_max = ugt x, mx
+    br above_max -> L_RETURN_MAX, L_CHECK_ZERO
+L_CHECK_ZERO:
+    is_zero = eq x, 0
+    br is_zero -> L_NONE_WITH_MAX, L_SCAN
+L_SCAN:
+    data = load v+VEB_clusters as ptr
+    start = sub x, 1
+    found = call @veb_find_prev(&data, start)
+    is_miss = eq found, none
+    br is_miss -> L_NONE_SCAN, L_FOUND
+L_FOUND:
+    !data
+    !start
+    !is_miss
+    !mx
+    !above_max
+    !is_zero
+    !mn
+    !none
+    !empty
+    return found
+L_NONE_SCAN:
+    !found
+    !data
+    !start
+    !is_miss
+    !mx
+    !above_max
+    !is_zero
+    !mn
+    !empty
+    return none
+L_NONE_WITH_MAX:
+    !mx
+    !above_max
+    !is_zero
+    !mn
+    !empty
+    return none
+L_RETURN_MAX:
+    !above_max
+    !mn
+    !none
+    !empty
+    return mx
+L_NONE:
+    !mn
+    !empty
+    return none
+
+@export veb_free(^v: ptr) -> void:
+L_ENTRY:
+    data = load v+VEB_clusters as ptr
+    !data
+    !v
+    return

@@ -1,0 +1,4 @@
+#def SegTreeU64_SIZE = 24
+#def SegTreeU64_len = +0
+#def SegTreeU64_nodes = +8
+#def SegTreeU64_merge = +16

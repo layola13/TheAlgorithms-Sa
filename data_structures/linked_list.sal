@@ -1,0 +1,8 @@
+#def LinkedList_SIZE = 24
+#def LinkedList_head = +0
+#def LinkedList_tail = +8
+#def LinkedList_len = +16
+
+#def LinkedListNode_SIZE = 16
+#def LinkedListNode_value = +0
+#def LinkedListNode_next = +8

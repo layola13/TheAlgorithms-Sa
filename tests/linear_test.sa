@@ -1,0 +1,45 @@
+@import "../data_structures/stack.sa"
+@import "../data_structures/queue.sa"
+@import "../data_structures/linked_list.sa"
+@import "../data_structures/lru_cache.sa"
+
+@test "stack"():
+L_ENTRY:
+    s = call @sa_stack_new()
+    call @sa_stack_push(&s, 10)
+    v = call @sa_stack_pop(&s)
+    ok = eq v, 10
+    !v
+    call @sa_stack_free(^s)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(401)
+
+@test "queue"():
+L_ENTRY:
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 10)
+    v = call @sa_queue_dequeue(&q)
+    ok = eq v, 10
+    !v
+    call @sa_queue_free(^q)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(402)
+
+@test "lru cache"():
+L_ENTRY:
+    lru = call @sa_lru_new(2)
+    call @sa_lru_put(&lru, 1, 100)
+    v = call @sa_lru_get(&lru, 1)
+    ok = eq v, 100
+    !v
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(404)

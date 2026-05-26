@@ -1,0 +1,155 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@partition(&data: ptr, l: u64, r: u64) -> u64:
+L_ENTRY:
+    eight0 = 8 as u64
+    __off = mul r, eight0
+    __addr = ptr_add data, __off
+    pivot = load __addr+0 as u64
+    !__off
+    !__addr
+    !eight0
+    i_slot = stack_alloc 8
+    store i_slot+0, l as u64
+    j_slot = stack_alloc 8
+    store j_slot+0, l as u64
+L_LOOP:
+    j = load j_slot+0 as u64
+    done = eq j, r
+    br done -> L_FINAL, L_BODY
+L_BODY:
+    eight = 8 as u64
+    __off = mul j, eight
+    __addr = ptr_add data, __off
+    val = load __addr+0 as u64
+    is_le = ule val, pivot
+    br is_le -> L_SWAP, L_NEXT
+L_SWAP:
+    i = load i_slot+0 as u64
+    off_i = mul i, eight
+    addr_i = ptr_add data, off_i
+    vi = load addr_i+0 as u64
+    store addr_i+0, val as u64
+    store __addr+0, vi as u64
+    one_i = 1 as u64
+    next_i = add i, one_i
+    store i_slot+0, next_i as u64
+    !i
+    !off_i
+    !addr_i
+    !vi
+    !one_i
+    !next_i
+    jmp L_NEXT
+L_NEXT:
+    one_j = 1 as u64
+    next_j = add j, one_j
+    store j_slot+0, next_j as u64
+    !j
+    !done
+    !eight
+    !__off
+    !__addr
+    !val
+    !is_le
+    !one_j
+    !next_j
+    jmp L_LOOP
+L_FINAL:
+    i_final = load i_slot+0 as u64
+    eight2 = 8 as u64
+    off_i_final = mul i_final, eight2
+    addr_i_final = ptr_add data, off_i_final
+    v_i = load addr_i_final+0 as u64
+    off_r = mul r, eight2
+    addr_r = ptr_add data, off_r
+    store addr_i_final+0, pivot as u64
+    store addr_r+0, v_i as u64
+    !j
+    !done
+    !eight2
+    !off_i_final
+    !addr_i_final
+    !v_i
+    !off_r
+    !addr_r
+    !pivot
+    return i_final
+
+@quick_select_recursive(&data: ptr, l: u64, r: u64, k: u64) -> u64:
+L_ENTRY:
+    eq_lr = eq l, r
+    br eq_lr -> L_RET_L, L_BODY
+L_RET_L:
+    eight = 8 as u64
+    __off = mul l, eight
+    __addr = ptr_add data, __off
+    v_l = load __addr+0 as u64
+    !eight
+    !__off
+    !__addr
+    !eq_lr
+    return v_l
+L_BODY:
+    p = call @partition(&data, l, r)
+    is_eq = eq p, k
+    br is_eq -> L_RET_P, L_CHECK_LT
+L_RET_P:
+    eight2 = 8 as u64
+    __off = mul p, eight2
+    __addr = ptr_add data, __off
+    v_p = load __addr+0 as u64
+    !eight2
+    !__off
+    !__addr
+    !p
+    !is_eq
+    !eq_lr
+    return v_p
+L_CHECK_LT:
+    is_lt = ult k, p
+    br is_lt -> L_LEFT, L_RIGHT
+L_LEFT:
+    one_l = 1 as u64
+    next_r = sub p, one_l
+    res_l = call @quick_select_recursive(&data, l, next_r, k)
+    !one_l
+    !next_r
+    !p
+    !is_eq
+    !is_lt
+    !eq_lr
+    return res_l
+L_RIGHT:
+    one_r = 1 as u64
+    next_l = add p, one_r
+    res_r = call @quick_select_recursive(&data, next_l, r, k)
+    !one_r
+    !next_l
+    !p
+    !is_eq
+    !is_lt
+    !eq_lr
+    return res_r
+
+@export sa_quick_select(&slice: ptr, k: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add slice, Slice_len
+    n = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add slice, Slice_ptr
+    data = load __addr+0 as ptr
+    !__addr
+    zero = 0 as u64
+    one = 1 as u64
+    last = sub n, one
+    res = call @quick_select_recursive(&data, zero, last, k)
+    !n
+    !data
+    !zero
+    !one
+    !last
+    !k
+    !slice
+    return res

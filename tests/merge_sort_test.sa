@@ -1,0 +1,40 @@
+@import "../sorting/merge_sort.sa"
+
+@test "merge sort basic"():
+L_ENTRY:
+    data = stack_alloc 32
+    store data+0, 4 as u64
+    store data+8, 1 as u64
+    store data+16, 3 as u64
+    store data+24, 2 as u64
+    s = stack_alloc 16
+    store s+0, data as ptr
+    store s+8, 4 as u64
+    call @sa_merge_sort(&s)
+
+    v0 = load data+0 as u64
+    v1 = load data+8 as u64
+    v2 = load data+16 as u64
+    v3 = load data+24 as u64
+
+    ok0 = eq v0, 1
+    ok1 = eq v1, 2
+    ok2 = eq v2, 3
+    ok3 = eq v3, 4
+    ok = and ok0, ok1
+    ok = and ok, ok2
+    ok = and ok, ok3
+
+    !v0
+    !v1
+    !v2
+    !v3
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(901)

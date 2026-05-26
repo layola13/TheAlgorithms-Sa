@@ -1,0 +1,13 @@
+#def LCG_A = 1103515245
+#def LCG_C = 12345
+
+@export sa_math_rand_u64(&seed_ptr: ptr) -> u64:
+L_ENTRY:
+    current = load seed_ptr+0 as u64
+    v1 = mul current, LCG_A
+    next = add v1, LCG_C
+    store seed_ptr+0, next as u64
+    !v1
+    !current
+    !seed_ptr
+    return next

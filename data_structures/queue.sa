@@ -1,0 +1,63 @@
+@import "sa_std/vec_deque.sa"
+
+@export sa_queue_new() -> ^ptr:
+L_ENTRY:
+    queue = call @sa_vec_deque_new()
+    return queue
+
+@export sa_queue_free(^queue: ptr) -> void:
+L_ENTRY:
+    call @sa_vec_deque_free(^queue)
+    return
+
+@export sa_queue_len(&queue: ptr) -> u64:
+L_ENTRY:
+    len = call @sa_vec_deque_len(&queue)
+    !queue
+    return len
+
+@export sa_queue_is_empty(&queue: ptr) -> i32:
+L_ENTRY:
+    empty = call @sa_vec_deque_is_empty(&queue)
+    !queue
+    return empty
+
+@export sa_queue_clear(&queue: ptr) -> void:
+L_ENTRY:
+    call @sa_vec_deque_clear(&queue)
+    !queue
+    return
+
+@export sa_queue_enqueue(&queue: ptr, value: u64) -> void:
+L_ENTRY:
+    call @sa_vec_deque_push_back(&queue, value)
+    !value
+    !queue
+    return
+
+@export sa_queue_dequeue(&queue: ptr) -> u64:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    ok = call @sa_vec_deque_try_pop_front(&queue, &value_slot)
+    value = load value_slot+0 as u64
+    !queue
+    return value
+
+@export sa_queue_try_dequeue(&queue: ptr, &out_value_slot: ptr) -> i32:
+L_ENTRY:
+    ok = call @sa_vec_deque_try_pop_front(&queue, &out_value_slot)
+    !out_value_slot
+    !queue
+    return ok
+
+@export sa_queue_peek_front(&queue: ptr) -> u64:
+L_ENTRY:
+    value = call @sa_vec_deque_front(&queue)
+    !queue
+    return value
+
+@export sa_queue_peek_back(&queue: ptr) -> u64:
+L_ENTRY:
+    value = call @sa_vec_deque_back(&queue)
+    !queue
+    return value

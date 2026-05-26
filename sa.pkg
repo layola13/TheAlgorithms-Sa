@@ -1,0 +1,5 @@
+# Future metadata only. Not compiler input.
+[package]
+name = "thealgorithms-sa"
+version = "0.1.0"
+

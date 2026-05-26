@@ -1,0 +1,8 @@
+#def SkipListNode_value = +0
+#def SkipListNode_forward = +8
+#def SkipListNode_MAX_LEVEL = 16
+#def SkipListNode_SIZE = 136
+
+#def SkipList_header = +0
+#def SkipList_level = +8
+#def SkipList_SIZE = 16

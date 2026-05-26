@@ -1,0 +1,4 @@
+#def LazySegTree_nodes = +0
+#def LazySegTree_lazy = +8
+#def LazySegTree_n = +16
+#def LazySegTree_SIZE = 24

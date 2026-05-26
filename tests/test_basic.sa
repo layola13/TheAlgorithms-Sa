@@ -1,0 +1,92 @@
+@import "../data_structures/stack.sa"
+@import "../data_structures/queue.sa"
+@import "../data_structures/linked_list.sa"
+@import "../data_structures/doubly_linked_list.sa"
+@import "../data_structures/binary_search_tree.sa"
+@import "../data_structures/heap.sa"
+@import "../data_structures/union_find.sa"
+
+@test "stack"():
+L_ENTRY:
+    s = call @sa_stack_new()
+    call @sa_stack_push(&s, 42)
+    v = call @sa_stack_pop(&s)
+    ok = eq v, 42
+    !v
+    call @sa_stack_free(^s)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)
+
+@test "queue"():
+L_ENTRY:
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 42)
+    v = call @sa_queue_dequeue(&q)
+    ok = eq v, 42
+    !v
+    call @sa_queue_free(^q)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)
+
+@test "linked list"():
+L_ENTRY:
+    l = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&l, 42)
+    len = call @sa_linked_list_len(&l)
+    ok = eq len, 1
+    call @sa_linked_list_free(^l)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)
+
+@test "bst"():
+L_ENTRY:
+    b = call @sa_bst_new()
+    call @sa_bst_insert(&b, 42)
+    found = call @sa_bst_search(&b, 42)
+    ok = eq found, 1
+    !found
+    call @sa_bst_free(^b)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)
+
+@test "heap"():
+L_ENTRY:
+    h = call @sa_heap_new()
+    call @sa_heap_add(&h, 42)
+    v = call @sa_heap_pop(&h)
+    ok = eq v, 42
+    !v
+    call @sa_heap_free(^h)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)
+
+@test "union find"():
+L_ENTRY:
+    u = call @sa_uf_new()
+    a = call @sa_uf_make_set(&u)
+    b = call @sa_uf_make_set(&u)
+    call @sa_uf_union(&u, a, b)
+    res = call @sa_uf_same_set(&u, a, b)
+    ok = eq res, 1
+    !res
+    call @sa_uf_free(^u)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(103)

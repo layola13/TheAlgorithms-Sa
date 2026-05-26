@@ -1,0 +1,327 @@
+@import "avl_tree.sal"
+
+@avl_node_new(value: u64) -> ^ptr:
+L_ENTRY:
+    node = alloc AVLNode_SIZE
+    __addr2 = ptr_add node, AVLNode_value
+    store __addr2+0, value as u64
+    !__addr2
+    __addr2 = ptr_add node, AVLNode_left
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add node, AVLNode_right
+    store __addr2+0, 0 as ptr
+    !__addr2
+    h1 = 1 as i32
+    __addr2 = ptr_add node, AVLNode_height
+    store __addr2+0, h1 as i32
+    !__addr2
+    !h1
+    return node
+
+@avl_get_height(&node: ptr) -> i32:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NULL, L_VAL
+L_NULL:
+    !is_null
+    return 0
+L_VAL:
+    __addr = ptr_add node, AVLNode_height
+    h = load __addr+0 as i32
+    !__addr
+    !is_null
+    return h
+
+@avl_update_height(&node: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add node, AVLNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add node, AVLNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    h_l = call @avl_get_height(&left)
+    h_r = call @avl_get_height(&right)
+    
+    is_gt = sgt h_l, h_r
+    max_h_slot = stack_alloc 4
+    br is_gt -> L_L, L_R
+L_L:
+    store max_h_slot+0, h_l as i32
+    jmp L_DONE
+L_R:
+    store max_h_slot+0, h_r as i32
+    jmp L_DONE
+L_DONE:
+    m = load max_h_slot+0 as i32
+    one = 1 as i32
+    new_h = add m, one
+    __addr2 = ptr_add node, AVLNode_height
+    store __addr2+0, new_h as i32
+    !__addr2
+    !left
+    !right
+    !h_l
+    !h_r
+    !is_gt
+    !m
+    !one
+    !new_h
+    return
+
+@avl_get_balance(&node: ptr) -> i32:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NULL, L_VAL
+L_NULL:
+    !is_null
+    return 0
+L_VAL:
+    __addr = ptr_add node, AVLNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add node, AVLNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    h_l = call @avl_get_height(&left)
+    h_r = call @avl_get_height(&right)
+    diff = sub h_l, h_r
+    !left
+    !right
+    !h_l
+    !h_r
+    !is_null
+    return diff
+
+@avl_rotate_right(^y: ptr) -> ^ptr:
+L_ENTRY:
+    __addr = ptr_add y, AVLNode_left
+    x = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add x, AVLNode_right
+    t2 = load __addr+0 as ptr
+    !__addr
+    __addr2 = ptr_add x, AVLNode_right
+    store __addr2+0, y as ptr
+    !__addr2
+    __addr2 = ptr_add y, AVLNode_left
+    store __addr2+0, t2 as ptr
+    !__addr2
+    call @avl_update_height(&y)
+    call @avl_update_height(&x)
+    !t2
+    return x
+
+@avl_rotate_left(^x: ptr) -> ^ptr:
+L_ENTRY:
+    __addr = ptr_add x, AVLNode_right
+    y = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add y, AVLNode_left
+    t2 = load __addr+0 as ptr
+    !__addr
+    __addr2 = ptr_add y, AVLNode_left
+    store __addr2+0, x as ptr
+    !__addr2
+    __addr2 = ptr_add x, AVLNode_right
+    store __addr2+0, t2 as ptr
+    !__addr2
+    call @avl_update_height(&x)
+    call @avl_update_height(&y)
+    !t2
+    return y
+
+@avl_rebalance(^node: ptr) -> ^ptr:
+L_ENTRY:
+    call @avl_update_height(&node)
+    balance = call @avl_get_balance(&node)
+    
+    one = 1 as i32
+    gt1 = sgt balance, one
+    br gt1 -> L_LEFT_HEAVY, L_CHECK_RIGHT
+
+L_LEFT_HEAVY:
+    __addr = ptr_add node, AVLNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    lb = call @avl_get_balance(&left)
+    zero = 0 as i32
+    lt0 = slt lb, zero
+    br lt0 -> L_LR, L_LL
+L_LR:
+    nl = call @avl_rotate_left(^left)
+    __addr2 = ptr_add node, AVLNode_left
+    store __addr2+0, nl as ptr
+    !__addr2
+    res = call @avl_rotate_right(^node)
+    !gt1
+    !balance
+    !lb
+    !lt0
+    !nl
+    !one
+    !zero
+    return res
+L_LL:
+    res = call @avl_rotate_right(^node)
+    !gt1
+    !balance
+    !lb
+    !lt0
+    !left
+    !one
+    !zero
+    return res
+
+L_CHECK_RIGHT:
+    zero2 = 0 as i32
+    m1 = sub zero2, one
+    ltm1 = slt balance, m1
+    br ltm1 -> L_RIGHT_HEAVY, L_NONE
+L_RIGHT_HEAVY:
+    __addr = ptr_add node, AVLNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    rb = call @avl_get_balance(&right)
+    zero3 = 0 as i32
+    gt0 = sgt rb, zero3
+    br gt0 -> L_RL, L_RR
+L_RL:
+    nr = call @avl_rotate_right(^right)
+    __addr2 = ptr_add node, AVLNode_right
+    store __addr2+0, nr as ptr
+    !__addr2
+    res = call @avl_rotate_left(^node)
+    !gt1
+    !balance
+    !ltm1
+    !m1
+    !rb
+    !gt0
+    !nr
+    !one
+    !zero2
+    !zero3
+    return res
+L_RR:
+    res = call @avl_rotate_left(^node)
+    !gt1
+    !balance
+    !ltm1
+    !m1
+    !rb
+    !gt0
+    !right
+    !one
+    !zero2
+    !zero3
+    return res
+
+L_NONE:
+    !gt1
+    !balance
+    !ltm1
+    !m1
+    !one
+    !zero2
+    return node
+
+@avl_insert_node(&node_ptr: ptr, value: u64) -> void:
+L_ENTRY:
+    node = load node_ptr+0 as ptr
+    is_null = eq node, 0
+    br is_null -> L_NEW, L_BODY
+L_BODY:
+    __addr = ptr_add node, AVLNode_value
+    cv = load __addr+0 as u64
+    !__addr
+    is_lt = ult value, cv
+    br is_lt -> L_INSERT_LEFT, L_INSERT_RIGHT
+L_INSERT_LEFT:
+    left_ptr = ptr_add node, AVLNode_left
+    call @avl_insert_node(&left_ptr, value)
+    !left_ptr
+    rebalanced = call @avl_rebalance(^node)
+    store node_ptr+0, rebalanced as ptr
+    !is_lt
+    !cv
+    !is_null
+    return
+L_INSERT_RIGHT:
+    right_ptr = ptr_add node, AVLNode_right
+    call @avl_insert_node(&right_ptr, value)
+    !right_ptr
+    rebalanced2 = call @avl_rebalance(^node)
+    store node_ptr+0, rebalanced2 as ptr
+    !is_lt
+    !cv
+    !is_null
+    return
+L_NEW:
+    nn = call @avl_node_new(value)
+    store node_ptr+0, nn as ptr
+    !is_null
+    !nn
+    return
+
+@export sa_avl_new() -> ^ptr:
+L_ENTRY:
+    avl = alloc AVL_SIZE
+    __addr2 = ptr_add avl, AVL_root
+    store __addr2+0, 0 as ptr
+    !__addr2
+    zero = 0 as u64
+    __addr2 = ptr_add avl, AVL_len
+    store __addr2+0, zero as u64
+    !__addr2
+    !zero
+    return avl
+
+@export sa_avl_insert(&avl: ptr, value: u64) -> void:
+L_ENTRY:
+    root_ptr = ptr_add avl, AVL_root
+    call @avl_insert_node(&root_ptr, value)
+    !root_ptr
+    __addr = ptr_add avl, AVL_len
+    len = load __addr+0 as u64
+    !__addr
+    one = 1 as u64
+    next_len = add len, one
+    __addr2 = ptr_add avl, AVL_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !one
+    !next_len
+    !len
+    return
+
+@avl_node_free(^node: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_DONE, L_BODY
+L_BODY:
+    __addr = ptr_add node, AVLNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add node, AVLNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    call @avl_node_free(^left)
+    call @avl_node_free(^right)
+    !node
+    !is_null
+    return
+L_DONE:
+    !node
+    !is_null
+    return
+
+@export sa_avl_free(^avl: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add avl, AVL_root
+    root = load __addr+0 as ptr
+    !__addr
+    call @avl_node_free(^root)
+    !avl
+    return

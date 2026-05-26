@@ -1,0 +1,35 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/sa_core.sa"
+@import "../data_structures/binary_search_tree.sa"
+
+@test "BST insertion and search"():
+L_ENTRY:
+    bst = call @sa_bst_new()
+    call @sa_bst_insert(&bst, 50)
+    call @sa_bst_insert(&bst, 30)
+    call @sa_bst_insert(&bst, 70)
+    
+    found50 = call @sa_bst_search(&bst, 50)
+    found30 = call @sa_bst_search(&bst, 30)
+    found70 = call @sa_bst_search(&bst, 70)
+    found10 = call @sa_bst_search(&bst, 10)
+    
+    ok50 = eq found50, 1
+    br ok50 -> L_OK_30, L_FAIL
+L_OK_30:
+    ok30 = eq found30, 1
+    br ok30 -> L_OK_70, L_FAIL
+L_OK_70:
+    ok70 = eq found70, 1
+    br ok70 -> L_OK_10, L_FAIL
+L_OK_10:
+    ok10 = eq found10, 0
+    br ok10 -> L_PASS, L_FAIL
+
+L_PASS:
+    call @sa_bst_free(^bst)
+    return
+
+L_FAIL:
+    call @sa_bst_free(^bst)
+    panic(103)

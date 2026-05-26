@@ -1,0 +1,81 @@
+@import "sa_std/vec.sal"
+@import "sa_std/vec.sa"
+
+@export sa_stack_new() -> ^ptr:
+L_ENTRY:
+    stack = call @sa_vec_new()
+    return stack
+
+@export sa_stack_free(^stack: ptr) -> void:
+L_ENTRY:
+    call @sa_vec_free(^stack)
+    return
+
+@export sa_stack_len(&stack: ptr) -> u64:
+L_ENTRY:
+    len = call @sa_vec_len(&stack)
+    !stack
+    return len
+
+@export sa_stack_is_empty(&stack: ptr) -> i32:
+L_ENTRY:
+    empty = call @sa_vec_is_empty(&stack)
+    !stack
+    return empty
+
+@export sa_stack_clear(&stack: ptr) -> void:
+L_ENTRY:
+    call @sa_vec_clear(&stack)
+    !stack
+    return
+
+@export sa_stack_push(&stack: ptr, value: u64) -> void:
+L_ENTRY:
+    stack = call @sa_vec_push(^stack, value, 8)
+    !value
+    !stack
+    return
+
+@export sa_stack_peek(&stack: ptr) -> u64:
+L_ENTRY:
+    len = call @sa_vec_len(&stack)
+    empty = eq len, 0
+    br empty -> L_EMPTY, L_READY
+
+L_READY:
+    __addr = ptr_add stack, Vec_ptr
+    vec_ptr = load __addr+0 as ptr
+    !__addr
+    last_index = sub len, 1
+    last_off = mul last_index, 8
+    last_ptr = ptr_add vec_ptr, last_off
+    value = load last_ptr+0 as u64
+    !last_ptr
+    !last_off
+    !last_index
+    !vec_ptr
+    !empty
+    !len
+    !stack
+    return value
+
+L_EMPTY:
+    !empty
+    !len
+    !stack
+    return 0
+
+@export sa_stack_try_pop(&stack: ptr, &out_value_slot: ptr) -> i32:
+L_ENTRY:
+    ok = call @sa_vec_try_pop(&stack, &out_value_slot)
+    !out_value_slot
+    !stack
+    return ok
+
+@export sa_stack_pop(&stack: ptr) -> u64:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    ok = call @sa_stack_try_pop(&stack, &value_slot)
+    value = load value_slot+0 as u64
+    !stack
+    return value

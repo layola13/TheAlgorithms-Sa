@@ -1,0 +1,152 @@
+@import "sa_std/core/mem.sa"
+@import "../common/math.sa"
+@import "treap.sal"
+
+@treap_node_new(value: u64, priority: u64) -> ^ptr:
+L_ENTRY:
+    node = alloc TreapNode_SIZE
+    store node+TreapNode_value, value as u64
+    store node+TreapNode_priority, priority as u64
+    store node+TreapNode_left, 0 as ptr
+    store node+TreapNode_right, 0 as ptr
+    return node
+
+@treap_split(^node: ptr, key: u64, &l_out: ptr, &r_out: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NULL, L_BODY
+L_NULL:
+    store l_out+0, 0 as ptr
+    store r_out+0, 0 as ptr
+    !node
+    !is_null
+    return
+L_BODY:
+    val = load node+TreapNode_value as u64
+    is_lt = ult val, key
+    br is_lt -> L_SPLIT_RIGHT, L_SPLIT_LEFT
+
+L_SPLIT_RIGHT:
+    right = load node+TreapNode_right as ptr
+    l_sub_slot = stack_alloc 8
+    r_sub_slot = stack_alloc 8
+    call @treap_split(^right, key, &l_sub_slot, &r_sub_slot)
+    l_sub = load l_sub_slot+0 as ptr
+    r_sub = load r_sub_slot+0 as ptr
+    store node+TreapNode_right, l_sub as ptr
+    store l_out+0, node as ptr
+    store r_out+0, r_sub as ptr
+    !is_lt
+    !val
+    !is_null
+    return
+
+L_SPLIT_LEFT:
+    left = load node+TreapNode_left as ptr
+    l_sub_slot2 = stack_alloc 8
+    r_sub_slot2 = stack_alloc 8
+    call @treap_split(^left, key, &l_sub_slot2, &r_sub_slot2)
+    l_sub2 = load l_sub_slot2+0 as ptr
+    r_sub2 = load r_sub_slot2+0 as ptr
+    store node+TreapNode_left, r_sub2 as ptr
+    store l_out+0, l_sub2 as ptr
+    store r_out+0, node as ptr
+    !is_lt
+    !val
+    !is_null
+    return
+
+@treap_merge(^l: ptr, ^r: ptr) -> ^ptr:
+L_ENTRY:
+    l_null = eq l, 0
+    br l_null -> L_RETURN_R, L_CHECK_R
+L_RETURN_R:
+    !l_null
+    !l
+    return r
+L_CHECK_R:
+    r_null = eq r, 0
+    br r_null -> L_RETURN_L, L_BODY
+L_RETURN_L:
+    !r_null
+    !r
+    !l_null
+    return l
+L_BODY:
+    l_prio = load l+TreapNode_priority as u64
+    r_prio = load r+TreapNode_priority as u64
+    l_wins = ugt l_prio, r_prio
+    br l_wins -> L_MERGE_L, L_MERGE_R
+
+L_MERGE_L:
+    l_right = load l+TreapNode_right as ptr
+    new_right = call @treap_merge(^l_right, ^r)
+    store l+TreapNode_right, new_right as ptr
+    !l_prio
+    !r_prio
+    !l_wins
+    !r_null
+    !l_null
+    return l
+
+L_MERGE_R:
+    r_left = load r+TreapNode_left as ptr
+    new_left = call @treap_merge(^l, ^r_left)
+    store r+TreapNode_left, new_left as ptr
+    !l_prio
+    !r_prio
+    !l_wins
+    !r_null
+    !l_null
+    return r
+
+@export sa_treap_new(seed: u64) -> ^ptr:
+L_ENTRY:
+    t = alloc Treap_SIZE
+    store t+Treap_root, 0 as ptr
+    store t+Treap_seed, seed as u64
+    return t
+
+@export sa_treap_insert(&t: ptr, value: u64) -> void:
+L_ENTRY:
+    sp = ptr_add t, Treap_seed
+    prio = call @sa_math_rand_u64(&sp)
+    nn = call @treap_node_new(value, prio)
+    
+    root = load t+Treap_root as ptr
+    ls = stack_alloc 8
+    rs = stack_alloc 8
+    call @treap_split(^root, value, &ls, &rs)
+    
+    l = load ls+0 as ptr
+    r = load rs+0 as ptr
+    
+    ml = call @treap_merge(^l, ^nn)
+    fr = call @treap_merge(^ml, ^r)
+    store t+Treap_root, fr as ptr
+    !sp
+    return
+
+@treap_node_free(^node: ptr) -> void:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_DONE, L_BODY
+L_BODY:
+    l = load node+TreapNode_left as ptr
+    r = load node+TreapNode_right as ptr
+    call @treap_node_free(^l)
+    call @treap_node_free(^r)
+    !node
+    !is_null
+    return
+L_DONE:
+    !node
+    !is_null
+    return
+
+@export sa_treap_free(^t: ptr) -> void:
+L_ENTRY:
+    root = load t+Treap_root as ptr
+    call @treap_node_free(^root)
+    !t
+    return

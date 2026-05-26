@@ -1,0 +1,195 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/hashmap.sa"
+@import "bloom_filter.sal"
+
+@bf_hash_ptr(&key: ptr, seed: u64) -> u64:
+L_ENTRY:
+    base = bitcast key as u64
+    mixed1 = xor base, seed
+    mixed2 = mul mixed1, 1099511628211
+    mixed2_hi = shr mixed2, 32
+    mixed3 = xor mixed2, mixed2_hi
+    !base
+    !mixed1
+    !mixed2
+    !mixed2_hi
+    !seed
+    !key
+    return mixed3
+
+@bf_set_bit(&bits: ptr, index: u64) -> void:
+L_ENTRY:
+    byte_index = udiv index, 8
+    bit_index = and index, 7
+    byte_ptr = ptr_add bits, byte_index
+    byte = load byte_ptr+0 as u8
+    mask = shl 1, bit_index
+    next_byte = or byte, mask
+    store byte_ptr+0, next_byte as u8
+    !next_byte
+    !mask
+    !byte
+    !byte_ptr
+    !bit_index
+    !byte_index
+    !index
+    return
+
+@bf_get_bit(&bits: ptr, index: u64) -> i32:
+L_ENTRY:
+    byte_index = udiv index, 8
+    bit_index = and index, 7
+    byte_ptr = ptr_add bits, byte_index
+    byte = load byte_ptr+0 as u8
+    mask = shl 1, bit_index
+    has = and byte, mask
+    is_set = ne has, 0
+    result = is_set as i32
+    !has
+    !mask
+    !byte
+    !byte_ptr
+    !bit_index
+    !byte_index
+    !index
+    return result
+
+@export sa_bloom_filter_new(bit_len: u64, hash_count: u64) -> ^ptr:
+L_ENTRY:
+    byte_quot = udiv bit_len, 8
+    byte_rem = and bit_len, 7
+    has_rem = ne byte_rem, 0
+    byte_len = add byte_quot, has_rem
+    bits = alloc byte_len
+    call @sa_mem_set(&bits, 0, byte_len)
+    filter = alloc BloomFilter_SIZE
+    __addr2 = ptr_add filter, BloomFilter_bits
+    store __addr2+0, bits as ptr
+    !__addr2
+    __addr2 = ptr_add filter, BloomFilter_bit_len
+    store __addr2+0, bit_len as u64
+    !__addr2
+    __addr2 = ptr_add filter, BloomFilter_hash_count
+    store __addr2+0, hash_count as u64
+    !__addr2
+    !bits
+    !has_rem
+    !byte_rem
+    !byte_quot
+    !byte_len
+    !bit_len
+    return filter
+
+@export sa_bloom_filter_free(^filter: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add filter, BloomFilter_bits
+    bits = load __addr+0 as ptr
+    !__addr
+    call @sa_mem_set(&bits, 0, 0)
+    !bits
+    !filter
+    return
+
+@bf_apply_hashes(&bits: ptr, bit_len: u64, hash_count: u64, key: u64, idx: u64) -> void:
+L_ENTRY:
+    done = uge idx, hash_count
+    br done -> L_DONE, L_BODY
+
+L_BODY:
+    seed = add idx, 1
+    hash = call @bf_hash_ptr(&key, seed)
+    bit_idx = urem hash, bit_len
+    call @bf_set_bit(&bits, bit_idx)
+    next_idx = add idx, 1
+    call @bf_apply_hashes(&bits, bit_len, hash_count, key, next_idx)
+    !next_idx
+    !done
+    !seed
+    !hash
+    !bit_idx
+    return
+
+L_DONE:
+    !idx
+    !hash_count
+    !bit_len
+    !bits
+    !key
+    return
+
+@export sa_bloom_filter_insert(&filter: ptr, key: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add filter, BloomFilter_bits
+    bits = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add filter, BloomFilter_bit_len
+    bit_len = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add filter, BloomFilter_hash_count
+    hash_count = load __addr+0 as u64
+    !__addr
+    call @bf_apply_hashes(&bits, bit_len, hash_count, key, 0)
+    !hash_count
+    !bit_len
+    !bits
+    !key
+    !filter
+    return
+
+@bf_check_hashes(&bits: ptr, bit_len: u64, hash_count: u64, key: u64, idx: u64) -> i32:
+L_ENTRY:
+    done = uge idx, hash_count
+    br done -> L_PRESENT, L_BODY
+
+L_BODY:
+    seed = add idx, 1
+    hash = call @bf_hash_ptr(&key, seed)
+    bit_idx = urem hash, bit_len
+    is_set = call @bf_get_bit(&bits, bit_idx)
+    br is_set -> L_NEXT, L_ABSENT
+
+L_NEXT:
+    next_idx = add idx, 1
+    result = call @bf_check_hashes(&bits, bit_len, hash_count, key, next_idx)
+    !next_idx
+    !done
+    !is_set
+    !seed
+    !hash
+    !bit_idx
+    return result
+
+L_ABSENT:
+    !done
+    !is_set
+    !seed
+    !hash
+    !bit_idx
+    return 0
+
+L_PRESENT:
+    !idx
+    !hash_count
+    !bit_len
+    !bits
+    !key
+    return 1
+
+@export sa_bloom_filter_contains(&filter: ptr, key: u64) -> i32:
+L_ENTRY:
+    __addr = ptr_add filter, BloomFilter_bits
+    bits = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add filter, BloomFilter_bit_len
+    bit_len = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add filter, BloomFilter_hash_count
+    hash_count = load __addr+0 as u64
+    !__addr
+    result = call @bf_check_hashes(&bits, bit_len, hash_count, key, 0)
+    !hash_count
+    !bit_len
+    !bits
+    !key
+    !filter
+    return result

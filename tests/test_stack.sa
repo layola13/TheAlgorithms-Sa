@@ -1,0 +1,14 @@
+@import "../data_structures/stack.sa"
+@test "stack"():
+L_ENTRY:
+    s = call @sa_stack_new()
+    call @sa_stack_push(&s, 10)
+    v = call @sa_stack_pop(&s)
+    ok = eq v, 10
+    !v
+    call @sa_stack_free(^s)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(401)

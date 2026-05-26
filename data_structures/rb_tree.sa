@@ -1,0 +1,237 @@
+@import "rb_tree.sal"
+
+@rb_node_new(value: u64) -> ^ptr:
+L_ENTRY:
+    node = alloc RBNode_SIZE
+    store node+RBNode_value, value as u64
+    store node+RBNode_color, 0 as i32
+    store node+RBNode_left, 0 as ptr
+    store node+RBNode_right, 0 as ptr
+    store node+RBNode_parent, 0 as ptr
+    return node
+
+@rb_rotate_left(&tree: ptr, x: ptr) -> void:
+L_ENTRY:
+    y = load x+RBNode_right as ptr
+    t2 = load y+RBNode_left as ptr
+    store x+RBNode_right, t2 as ptr
+    iz2 = eq t2, 0
+    br iz2 -> L_S1, L_S2
+L_S2:
+    store t2+RBNode_parent, x as ptr
+    jmp L_S1
+L_S1:
+    p = load x+RBNode_parent as ptr
+    store y+RBNode_parent, p as ptr
+    izp = eq p, 0
+    br izp -> L_SR, L_SC
+L_SR:
+    store tree+RBTree_root, y as ptr
+    jmp L_SF
+L_SC:
+    pl = load p+RBNode_left as ptr
+    il = eq pl, x
+    br il -> L_SL, L_SRR
+L_SL:
+    store p+RBNode_left, y as ptr
+    jmp L_SF
+L_SRR:
+    store p+RBNode_right, y as ptr
+    jmp L_SF
+L_SF:
+    store y+RBNode_left, x as ptr
+    store x+RBNode_parent, y as ptr
+    return
+
+@rb_rotate_right(&tree: ptr, y: ptr) -> void:
+L_ENTRY:
+    x = load y+RBNode_left as ptr
+    t2 = load x+RBNode_right as ptr
+    store y+RBNode_left, t2 as ptr
+    iz2 = eq t2, 0
+    br iz2 -> L_S1, L_S2
+L_S2:
+    store t2+RBNode_parent, y as ptr
+    jmp L_S1
+L_S1:
+    p = load y+RBNode_parent as ptr
+    store x+RBNode_parent, p as ptr
+    izp = eq p, 0
+    br izp -> L_SR, L_SC
+L_SR:
+    store tree+RBTree_root, x as ptr
+    jmp L_SF
+L_SC:
+    pr = load p+RBNode_right as ptr
+    ir = eq pr, y
+    br ir -> L_SRRR, L_SLL
+L_SRRR:
+    store p+RBNode_right, x as ptr
+    jmp L_SF
+L_SLL:
+    store p+RBNode_left, x as ptr
+    jmp L_SF
+L_SF:
+    store x+RBNode_right, y as ptr
+    store y+RBNode_parent, x as ptr
+    return
+
+@rb_insert_fixup(&tree: ptr, z: ptr) -> void:
+L_ENTRY:
+    p = load z+RBNode_parent as ptr
+    izp = eq p, 0
+    br izp -> L_D, L_C1
+L_C1:
+    pc = load p+RBNode_color as i32
+    irp = eq pc, 0
+    br irp -> L_B, L_D
+L_B:
+    gp = load p+RBNode_parent as ptr
+    gpl = load gp+RBNode_left as ptr
+    ipl = eq p, gpl
+    br ipl -> L_LU, L_RU
+L_LU:
+    y = load gp+RBNode_right as ptr
+    yn = eq y, 0
+    br yn -> L_C2, L_CY
+L_CHECK_Y:
+L_CY:
+    yc = load y+RBNode_color as i32
+    yr = eq yc, 0
+    br yr -> L_C1_FIX, L_C2
+L_C1_FIX:
+    store p+RBNode_color, 1 as i32
+    store y+RBNode_color, 1 as i32
+    store gp+RBNode_color, 0 as i32
+    call @rb_insert_fixup(&tree, gp)
+    return
+L_CASE2:
+L_C2:
+    pr = load p+RBNode_right as ptr
+    iz = eq z, pr
+    br iz -> L_C2R, L_C3
+L_C2R:
+    call @rb_rotate_left(&tree, p)
+    call @rb_insert_fixup(&tree, p)
+    return
+L_CASE3:
+L_C3:
+    store p+RBNode_color, 1 as i32
+    store gp+RBNode_color, 0 as i32
+    call @rb_rotate_right(&tree, gp)
+    return
+L_RIGHT_UNCLE:
+L_RU:
+    y2 = load gp+RBNode_left as ptr
+    y2n = eq y2, 0
+    br y2n -> L_RC2, L_RCY
+L_R_CHECK_Y:
+L_RCY:
+    y2c = load y2+RBNode_color as i32
+    y2r = eq y2c, 0
+    br y2r -> L_RC1_FIX, L_RC2
+L_RC1_FIX:
+    store p+RBNode_color, 1 as i32
+    store y2+RBNode_color, 1 as i32
+    store gp+RBNode_color, 0 as i32
+    call @rb_insert_fixup(&tree, gp)
+    return
+L_R_CASE2:
+L_RC2:
+    pl = load p+RBNode_left as ptr
+    iz2 = eq z, pl
+    br iz2 -> L_RC2R, L_RC3
+L_RC2R:
+    call @rb_rotate_right(&tree, p)
+    call @rb_insert_fixup(&tree, p)
+    return
+L_R_CASE3:
+L_RC3:
+    store p+RBNode_color, 1 as i32
+    store gp+RBNode_color, 0 as i32
+    call @rb_rotate_left(&tree, gp)
+    return
+L_DONE:
+L_D:
+    rt = load tree+RBTree_root as ptr
+    izrt = eq rt, 0
+    br izrt -> L_EX, L_F
+L_FIN:
+L_F:
+    store rt+RBNode_color, 1 as i32
+    jmp L_EX
+L_EXIT:
+L_EX:
+    return
+
+@export sa_rb_new() -> ^ptr:
+L_ENTRY:
+    t = alloc RBTree_SIZE
+    store t+RBTree_root, 0 as ptr
+    return t
+
+@export sa_rb_insert(&tree: ptr, value: u64) -> void:
+L_ENTRY:
+    nn = call @rb_node_new(value)
+    rt = load tree+RBTree_root as ptr
+    iz = eq rt, 0
+    br iz -> L_FST, L_B
+L_FST:
+    store tree+RBTree_root, nn as ptr
+    store nn+RBNode_color, 1 as i32
+    return
+L_B:
+    call @rb_bst_insert_rec(rt, nn, value)
+    call @rb_insert_fixup(&tree, nn)
+    return
+
+@rb_bst_insert_rec(node: ptr, nn: ptr, v: u64) -> void:
+L_ENTRY:
+    cv = load node+RBNode_value as u64
+    il = ult v, cv
+    br il -> L_L, L_R
+L_L:
+    lp = ptr_add node, RBNode_left
+    l = load lp+0 as ptr
+    izl = eq l, 0
+    br izl -> L_NL, L_RL
+L_NL:
+    store lp+0, nn as ptr
+    store nn+RBNode_parent, node as ptr
+    return
+L_RL:
+    call @rb_bst_insert_rec(l, nn, v)
+    return
+L_R:
+    rp = ptr_add node, RBNode_right
+    r = load rp+0 as ptr
+    izr = eq r, 0
+    br izr -> L_NR, L_RR
+L_NR:
+    store rp+0, nn as ptr
+    store nn+RBNode_parent, node as ptr
+    return
+L_RR:
+    call @rb_bst_insert_rec(r, nn, v)
+    return
+L_DONE:
+    return
+
+@rb_node_free(^node: ptr) -> void:
+L_ENTRY:
+    iz = eq node, 0
+    br iz -> L_EX, L_B
+L_B:
+    l = load node+RBNode_left as ptr
+    r = load node+RBNode_right as ptr
+    call @rb_node_free(^l)
+    call @rb_node_free(^r)
+    return
+L_EX:
+    return
+
+@export sa_rb_free(^tree: ptr) -> void:
+L_ENTRY:
+    rt = load tree+RBTree_root as ptr
+    call @rb_node_free(^rt)
+    return

@@ -1,0 +1,9 @@
+@import "../data_structures/lru_cache.sa"
+@test "lru get"():
+L_ENTRY:
+    l = call @sa_lru_new(2)
+    call @sa_lru_put(&l, 1, 10)
+    v = call @sa_lru_get(&l, 1)
+    !v
+    !l
+    return

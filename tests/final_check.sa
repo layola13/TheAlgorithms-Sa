@@ -1,0 +1,73 @@
+@import "../data_structures/stack.sa"
+@import "../data_structures/queue.sa"
+@import "../data_structures/linked_list.sa"
+@import "../data_structures/binary_search_tree.sa"
+@import "../data_structures/avl_tree.sa"
+@import "../data_structures/rb_tree.sa"
+@import "../data_structures/trie.sa"
+@import "../data_structures/probabilistic/bloom_filter.sa"
+@import "../data_structures/union_find.sa"
+@import "../data_structures/fenwick_tree.sa"
+@import "../searching/moore_voting.sa"
+
+@test "data structures comprehensive"():
+L_ENTRY:
+    // Stack
+    s = call @sa_stack_new()
+    call @sa_stack_push(&s, 1)
+    v1 = call @sa_stack_pop(&s)
+    !v1
+    call @sa_stack_free(^s)
+    
+    // Queue
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 1)
+    v2 = call @sa_queue_dequeue(&q)
+    !v2
+    call @sa_queue_free(^q)
+    
+    // LL
+    l = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&l, 1)
+    call @sa_linked_list_free(^l)
+    
+    // BST
+    b = call @sa_bst_new()
+    call @sa_bst_insert(&b, 1)
+    call @sa_bst_free(^b)
+    
+    // AVL
+    a = call @sa_avl_new()
+    call @sa_avl_insert(&a, 1)
+    call @sa_avl_free(^a)
+    
+    // RB
+    r = call @sa_rb_new()
+    call @sa_rb_insert(&r, 1)
+    call @sa_rb_free(^r)
+    
+    // Bloom
+    bf = call @sa_bloom_filter_new(10, 1)
+    call @sa_bloom_filter_insert(&bf, 1)
+    call @sa_bloom_filter_free(^bf)
+    
+    // UF
+    u = call @sa_uf_new()
+    call @sa_uf_make_set(&u)
+    call @sa_uf_free(^u)
+    
+    // Fenwick
+    f = call @sa_fenwick_new(5)
+    call @sa_fenwick_update(&f, 1, 1)
+    call @sa_fenwick_free(^f)
+    
+    // Moore
+    data = stack_alloc 8
+    store data+0, 1 as u64
+    sl = stack_alloc 16
+    store sl+0, data as ptr
+    store sl+8, 1 as u64
+    mv = call @sa_moore_voting(&sl)
+    !mv
+    
+    return

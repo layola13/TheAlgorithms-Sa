@@ -1,0 +1,120 @@
+#def RBN_V = +0
+#def RBN_C = +8
+#def RBN_L = +16
+#def RBN_R = +24
+#def RBN_P = +32
+#def RBN_S = 40
+
+@rb_node_new(v: u64) -> ^ptr:
+L_ENTRY:
+    n = alloc RBN_S
+    __addr2 = ptr_add n, RBN_V
+    store __addr2+0, v as u64
+    !__addr2
+    __addr2 = ptr_add n, RBN_C
+    store __addr2+0, 0 as i32
+    !__addr2
+    __addr2 = ptr_add n, RBN_L
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add n, RBN_R
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add n, RBN_P
+    store __addr2+0, 0 as ptr
+    !__addr2
+    return n
+
+@rb_insert_rec(&n: ptr, v: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add n, RBN_V
+    cv = load __addr+0 as u64
+    !__addr
+    is_lt = ult v, cv
+    br is_lt -> L_L, L_R
+L_L:
+    !cv
+    !is_lt
+    lp = ptr_add n, RBN_L
+    l = load lp+0 as ptr
+    is_null_l = eq l, 0
+    br is_null_l -> L_NEW_L, L_REC_L
+L_NEW_L:
+    nnl = call @rb_node_new(v)
+    store lp+0, nnl as ptr
+    __addr2 = ptr_add nnl, RBN_P
+    store __addr2+0, n as ptr
+    !__addr2
+    !nnl
+    !lp
+    !l
+    !is_null_l
+    return
+L_REC_L:
+    call @rb_insert_rec(&l, v)
+    !lp
+    !l
+    !is_null_l
+    return
+L_R:
+    !cv
+    !is_lt
+    rp = ptr_add n, RBN_R
+    r = load rp+0 as ptr
+    is_null_r = eq r, 0
+    br is_null_r -> L_NEW_R, L_REC_R
+L_NEW_R:
+    nnr = call @rb_node_new(v)
+    store rp+0, nnr as ptr
+    __addr2 = ptr_add nnr, RBN_P
+    store __addr2+0, n as ptr
+    !__addr2
+    !nnr
+    !rp
+    !r
+    !is_null_r
+    return
+L_REC_R:
+    call @rb_insert_rec(&r, v)
+    !rp
+    !r
+    !is_null_r
+    return
+
+@rb_insert(&root_ptr: ptr, v: u64) -> void:
+L_ENTRY:
+    r = load root_ptr+0 as ptr
+    is_null = eq r, 0
+    br is_null -> L_FIRST, L_BST
+L_FIRST:
+    nn = call @rb_node_new(v)
+    __addr2 = ptr_add nn, RBN_C
+    store __addr2+0, 1 as i32
+    !__addr2
+    store root_ptr+0, nn as ptr
+    !nn
+    !r
+    !is_null
+    return
+L_BST:
+    call @rb_insert_rec(&r, v)
+    !r
+    !is_null
+    return
+
+@test "rb basic"():
+L_ENTRY:
+    rp = stack_alloc 8
+    store rp+0, 0 as ptr
+    call @rb_insert(&rp, 10)
+    call @rb_insert(&rp, 20)
+    root = load rp+0 as ptr
+    __addr = ptr_add root, RBN_V
+    v = load __addr+0 as u64
+    !__addr
+    ok = eq v, 10
+    !v
+    !ok
+    !root
+
+    return

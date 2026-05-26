@@ -1,0 +1,6 @@
+#def CountMinSketch_SIZE = 32
+#def CountMinSketch_counts = +0
+#def CountMinSketch_width = +8
+#def CountMinSketch_depth = +16
+#def CountMinSketch_total_bytes = +24
+

@@ -1,0 +1,6 @@
+#def UF_SIZE = 32
+#def UF_parents = +0
+#def UF_sizes = +8
+#def UF_count = +16
+#def UF_len = +24
+

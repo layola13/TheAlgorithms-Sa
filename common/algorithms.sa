@@ -1,0 +1,2 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sa"

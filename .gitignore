@@ -1,0 +1,6 @@
+# SA compiled binaries and output artifacts
+bin/
+*.out
+*.wasm
+*.o
+*.bc

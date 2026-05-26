@@ -1,0 +1,336 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sa"
+@import "segment_tree_u64.sal"
+
+@seg_u64_ceil_pow2_step(v: u64, current: u64) -> u64:
+L_ENTRY:
+    done = uge current, v
+    br done -> L_DONE, L_STEP
+
+L_STEP:
+    next = add current, current
+    result = call @seg_u64_ceil_pow2_step(v, next)
+    !next
+    !done
+    !current
+    !v
+    return result
+
+L_DONE:
+    !done
+    !v
+    result = add current, 0
+    !current
+    return result
+
+@seg_u64_ceil_pow2(v: u64) -> u64:
+L_ENTRY:
+    result = call @seg_u64_ceil_pow2_step(v, 1)
+    !v
+    return result
+
+@seg_u64_init_nodes(&nodes: ptr, count: u64, idx: u64) -> void:
+L_ENTRY:
+    done = eq idx, count
+    br done -> L_DONE, L_BODY
+
+L_BODY:
+    ip = ptr_add nodes, mul idx, 8
+    store ip+0, 0 as u64
+    next = add idx, 1
+    call @seg_u64_init_nodes(&nodes, count, next)
+    return
+
+L_DONE:
+    !done
+    !idx
+    !count
+    !nodes
+    return
+
+@export sa_seg_u64_sum_build(&src: ptr) -> ^ptr:
+L_ENTRY:
+    __addr = ptr_add src, Slice_len
+    len = load __addr+0 as u64
+    !__addr
+    cap = call @seg_u64_ceil_pow2(len)
+    total_nodes = mul cap, 2
+    bytes = mul total_nodes, 8
+    nodes = alloc bytes
+    call @seg_u64_init_nodes(&nodes, total_nodes, 0)
+
+    tree = alloc SegTreeU64_SIZE
+    __addr2 = ptr_add tree, SegTreeU64_len
+    store __addr2+0, len as u64
+    !__addr2
+    __addr2 = ptr_add tree, SegTreeU64_nodes
+    store __addr2+0, nodes as ptr
+    !__addr2
+    __addr2 = ptr_add tree, SegTreeU64_merge
+    store __addr2+0, 0 as ptr
+    !__addr2
+
+    __addr = ptr_add src, Slice_ptr
+    src_ptr = load __addr+0 as ptr
+    !__addr
+    idx_slot = stack_alloc 8
+    store idx_slot+0, 0 as u64
+    jmp L_COPY_LOOP
+
+L_COPY_LOOP:
+    idx = load idx_slot+0 as u64
+    done = eq idx, len
+    br done -> L_BUILD_UP, L_COPY_BODY
+
+L_COPY_BODY:
+    src_off = mul idx, 8
+    src_ip = ptr_add src_ptr, src_off
+    value = load src_ip+0 as u64
+    dst_index = add cap, idx
+    dst_off = mul dst_index, 8
+    dst_ip = ptr_add nodes, dst_off
+    store dst_ip+0, value as u64
+    next_idx = add idx, 1
+    store idx_slot+0, next_idx as u64
+    !dst_ip
+    !dst_off
+    !dst_index
+    !value
+    !src_ip
+    !src_off
+    !src_ptr
+    !idx
+    !done
+    jmp L_COPY_LOOP
+
+L_BUILD_UP:
+    level_slot = stack_alloc 8
+    store level_slot+0, cap as u64
+    jmp L_LEVEL_LOOP
+
+L_LEVEL_LOOP:
+    level = load level_slot+0 as u64
+    is_one = eq level, 1
+    br is_one -> L_DONE, L_LEVEL_BODY
+
+L_LEVEL_BODY:
+    i_slot = stack_alloc 8
+    half = udiv level, 2
+    store i_slot+0, half as u64
+    jmp L_I_LOOP
+
+L_I_LOOP:
+    i = load i_slot+0 as u64
+    done_i = eq i, level
+    br done_i -> L_LEVEL_NEXT, L_I_BODY
+
+L_I_BODY:
+    left = mul i, 2
+    right = add left, 1
+    left_ip = ptr_add nodes, mul left, 8
+    right_ip = ptr_add nodes, mul right, 8
+    left_val = load left_ip+0 as u64
+    right_val = load right_ip+0 as u64
+    merged = add left_val, right_val
+    parent_ip = ptr_add nodes, mul i, 8
+    store parent_ip+0, merged as u64
+    next_i = add i, 1
+    store i_slot+0, next_i as u64
+    !parent_ip
+    !merged
+    !right_val
+    !left_val
+    !right_ip
+    !left_ip
+    !right
+    !left
+    !done_i
+    jmp L_I_LOOP
+
+L_LEVEL_NEXT:
+    next_level = udiv level, 2
+    store level_slot+0, next_level as u64
+    !next_level
+    !level
+    !half
+    !i_slot
+    !is_one
+    jmp L_LEVEL_LOOP
+
+L_DONE:
+    !tree
+    !bytes
+    !total_nodes
+    !cap
+    !len
+    return tree
+
+@seg_u64_read(&nodes: ptr, offset: u64) -> u64:
+L_ENTRY:
+    ip = ptr_add nodes, offset
+    value = load ip+0 as u64
+    !ip
+    return value
+
+@seg_u64_write(&nodes: ptr, offset: u64, value: u64) -> void:
+L_ENTRY:
+    ip = ptr_add nodes, offset
+    store ip+0, value as u64
+    !ip
+    return
+
+@export sa_seg_u64_sum_query(&tree: ptr, left: u64, right: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add tree, SegTreeU64_len
+    len = load __addr+0 as u64
+    !__addr
+    in_range = ule left, right
+    right_ok = ult right, len
+    valid = and in_range, right_ok
+    br valid -> L_OK, L_OOB
+
+L_OK:
+    __addr = ptr_add tree, SegTreeU64_nodes
+    nodes = load __addr+0 as ptr
+    !__addr
+    cap = call @seg_u64_ceil_pow2(len)
+    l_slot = stack_alloc 8
+    r_slot = stack_alloc 8
+    left_base = add left, cap
+    right_base = add right, cap
+    store l_slot+0, left_base as u64
+    store r_slot+0, right_base as u64
+    result_slot = stack_alloc 8
+    store result_slot+0, 0 as u64
+    jmp L_LOOP
+
+L_LOOP:
+    l = load l_slot+0 as u64
+    r = load r_slot+0 as u64
+    done = uge l, r
+    br done -> L_DONE, L_BODY
+
+L_BODY:
+    l_odd = and l, 1
+    br l_odd -> L_LEFT_PICK, L_RIGHT_CHECK
+
+L_LEFT_PICK:
+    l_off = mul l, 8
+    value = call @seg_u64_read(&nodes, l_off)
+    cur = load result_slot+0 as u64
+    next = add cur, value
+    store result_slot+0, next as u64
+    next_l = add l, 1
+    store l_slot+0, next_l as u64
+    !next_l
+    !next
+    !cur
+    !value
+    !l_off
+    !l_odd
+    jmp L_RIGHT_CHECK
+
+L_RIGHT_CHECK:
+    r_odd = and r, 1
+    br r_odd -> L_RIGHT_PICK, L_SHIFT
+
+L_RIGHT_PICK:
+    prev_r = sub r, 1
+    store r_slot+0, prev_r as u64
+    r_off = mul prev_r, 8
+    value2 = call @seg_u64_read(&nodes, r_off)
+    cur2 = load result_slot+0 as u64
+    next2 = add cur2, value2
+    store result_slot+0, next2 as u64
+    !next2
+    !cur2
+    !value2
+    !r_off
+    !prev_r
+    !r_odd
+    jmp L_SHIFT
+
+L_SHIFT:
+    next_l2 = udiv l, 2
+    next_r2 = udiv r, 2
+    store l_slot+0, next_l2 as u64
+    store r_slot+0, next_r2 as u64
+    !next_r2
+    !next_l2
+    !r
+    !l
+    jmp L_LOOP
+
+L_DONE:
+    result = load result_slot+0 as u64
+    !result_slot
+    !nodes
+    !cap
+    !len
+    return result
+
+L_OOB:
+    !valid
+    !right_ok
+    !in_range
+    !len
+    return 0
+
+@export sa_seg_u64_sum_update(&tree: ptr, index: u64, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add tree, SegTreeU64_len
+    len = load __addr+0 as u64
+    !__addr
+    in_range = ult index, len
+    br in_range -> L_OK, L_DONE
+
+L_OK:
+    __addr = ptr_add tree, SegTreeU64_nodes
+    nodes = load __addr+0 as ptr
+    !__addr
+    cap = call @seg_u64_ceil_pow2(len)
+    pos = add cap, index
+    pos_off = mul pos, 8
+    call @seg_u64_write(&nodes, pos_off, value)
+    level_slot = stack_alloc 8
+    pos_parent = udiv pos, 2
+    store level_slot+0, pos_parent as u64
+    jmp L_LOOP
+
+L_LOOP:
+    level = load level_slot+0 as u64
+    is_zero = eq level, 0
+    br is_zero -> L_DONE, L_BODY
+
+L_BODY:
+    left = mul level, 2
+    right = add left, 1
+    left_off = mul left, 8
+    right_off = mul right, 8
+    left_val = call @seg_u64_read(&nodes, left_off)
+    right_val = call @seg_u64_read(&nodes, right_off)
+    merged = add left_val, right_val
+    level_off = mul level, 8
+    call @seg_u64_write(&nodes, level_off, merged)
+    next_level = udiv level, 2
+    store level_slot+0, next_level as u64
+    !next_level
+    !merged
+    !right_val
+    !left_val
+    !right
+    !left
+    !pos_parent
+    !level_off
+    !right_off
+    !left_off
+    !is_zero
+    jmp L_LOOP
+
+L_DONE:
+    !level_slot
+    !nodes
+    !cap
+    !len
+    !in_range
+    return

@@ -1,0 +1,27 @@
+@import "../data_structures/stack.sa"
+@import "../data_structures/queue.sa"
+@import "../data_structures/linked_list.sa"
+@import "../data_structures/doubly_linked_list.sa"
+
+@test "linear basic"():
+L_ENTRY:
+    s = call @sa_stack_new()
+    call @sa_stack_push(&s, 1)
+    v1 = call @sa_stack_pop(&s)
+    !v1
+    call @sa_stack_free(^s)
+    
+    q = call @sa_queue_new()
+    call @sa_queue_enqueue(&q, 1)
+    v2 = call @sa_queue_dequeue(&q)
+    !v2
+    call @sa_queue_free(^q)
+    
+    l = call @sa_linked_list_new()
+    call @sa_linked_list_push_back(&l, 1)
+    call @sa_linked_list_free(^l)
+    
+    dl = call @sa_dll_new()
+    call @sa_dll_push_front(&dl, 1, 100)
+    call @sa_dll_free(^dl)
+    return

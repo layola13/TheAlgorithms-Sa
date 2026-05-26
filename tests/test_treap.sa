@@ -1,0 +1,8 @@
+@import "../data_structures/treap.sa"
+@test "treap"():
+L_ENTRY:
+    tr = call @sa_treap_new(42)
+    call @sa_treap_insert(&tr, 10)
+    call @sa_treap_insert(&tr, 20)
+    call @sa_treap_free(^tr)
+    return

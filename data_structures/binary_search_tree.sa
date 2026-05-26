@@ -1,0 +1,451 @@
+@import "binary_search_tree.sal"
+
+@bst_node_new(value: u64) -> ^ptr:
+L_ENTRY:
+    node = alloc BSTNode_SIZE
+    __addr2 = ptr_add node, BSTNode_value
+    store __addr2+0, value as u64
+    !__addr2
+    __addr2 = ptr_add node, BSTNode_left
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add node, BSTNode_right
+    store __addr2+0, 0 as ptr
+    !__addr2
+    return node
+
+@bst_search_node(&node: ptr, target: u64) -> i32:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NO, L_BODY
+
+L_BODY:
+    __addr = ptr_add node, BSTNode_value
+    value = load __addr+0 as u64
+    !__addr
+    lt = ult target, value
+    gt = ugt target, value
+    eqv = eq target, value
+    br eqv -> L_YES, L_BRANCH
+
+L_BRANCH:
+    br lt -> L_LEFT, L_RIGHT
+
+L_LEFT:
+    __addr = ptr_add node, BSTNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    ok = call @bst_search_node(&left, target)
+    !left
+    !gt
+    !lt
+    !eqv
+    !value
+    !is_null
+    return ok
+
+L_RIGHT:
+    __addr = ptr_add node, BSTNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    ok = call @bst_search_node(&right, target)
+    !right
+    !gt
+    !lt
+    !eqv
+    !value
+    !is_null
+    return ok
+
+L_YES:
+    !gt
+    !lt
+    !eqv
+    !value
+    !is_null
+    return 1
+
+L_NO:
+    !is_null
+    return 0
+
+@bst_insert_node(&node: ptr, value: u64) -> ptr:
+L_ENTRY:
+    is_null = eq node, 0
+    br is_null -> L_NEW, L_BODY
+
+L_BODY:
+    __addr = ptr_add node, BSTNode_value
+    current = load __addr+0 as u64
+    !__addr
+    lt = ult value, current
+    br lt -> L_GO_LEFT, L_GO_RIGHT
+
+L_GO_LEFT:
+    __addr = ptr_add node, BSTNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    new_left = call @bst_insert_node(&left, value)
+    __addr2 = ptr_add node, BSTNode_left
+    store __addr2+0, new_left as ptr
+    !__addr2
+    !new_left
+    !left
+    !lt
+    !current
+    !is_null
+    return node
+
+L_GO_RIGHT:
+    __addr = ptr_add node, BSTNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    new_right = call @bst_insert_node(&right, value)
+    __addr2 = ptr_add node, BSTNode_right
+    store __addr2+0, new_right as ptr
+    !__addr2
+    !new_right
+    !right
+    !lt
+    !current
+    !is_null
+    return node
+
+L_NEW:
+    new_node = call @bst_node_new(value)
+    !is_null
+    return new_node
+
+@bst_min_node(&node: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add node, BSTNode_left
+    left = load __addr+0 as ptr
+    !__addr
+    is_null = eq left, 0
+    br is_null -> L_HIT, L_RECURSE
+
+L_RECURSE:
+    result = call @bst_min_node(&left)
+    !left
+    !is_null
+    return result
+
+L_HIT:
+    __addr = ptr_add node, BSTNode_value
+    value = load __addr+0 as u64
+    !__addr
+    !left
+    !is_null
+    !node
+    return value
+
+@bst_max_node(&node: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add node, BSTNode_right
+    right = load __addr+0 as ptr
+    !__addr
+    is_null = eq right, 0
+    br is_null -> L_HIT, L_RECURSE
+
+L_RECURSE:
+    result = call @bst_max_node(&right)
+    !right
+    !is_null
+    return result
+
+L_HIT:
+    __addr = ptr_add node, BSTNode_value
+    value = load __addr+0 as u64
+    !__addr
+    !right
+    !is_null
+    !node
+    return value
+
+@export sa_bst_new() -> ^ptr:
+L_ENTRY:
+    bst = alloc BST_SIZE
+    __addr2 = ptr_add bst, BST_root
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add bst, BST_len
+    store __addr2+0, 0 as u64
+    !__addr2
+    __addr2 = ptr_add bst, BST_last
+    store __addr2+0, 0 as ptr
+    !__addr2
+    __addr2 = ptr_add bst, BST_last_high
+    store __addr2+0, 0 as u64
+    !__addr2
+    return bst
+
+@export sa_bst_free(^bst: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add bst, BST_root
+    root = load __addr+0 as ptr
+    !__addr
+    !root
+    !bst
+    return
+
+@export sa_bst_insert(&bst: ptr, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add bst, BST_root
+    root = load __addr+0 as ptr
+    !__addr
+    is_empty = eq root, 0
+    br is_empty -> L_EMPTY, L_SEARCH
+L_EMPTY:
+    new_root = call @bst_node_new(value)
+    root_addr = ptr_add bst, BST_root
+    store root_addr+0, new_root as ptr
+    !root_addr
+    last_addr_e = ptr_add bst, BST_last
+    store last_addr_e+0, new_root as ptr
+    !last_addr_e
+    hi_zero_e = 0 as u64
+    high_e = sub hi_zero_e, 1
+    last_high_addr_e = ptr_add bst, BST_last_high
+    store last_high_addr_e+0, high_e as u64
+    !last_high_addr_e
+    !new_root
+    !hi_zero_e
+    !high_e
+    !root
+    !is_empty
+    jmp L_INC_LEN
+L_SEARCH:
+    last_addr = ptr_add bst, BST_last
+    last = load last_addr+0 as ptr
+    last_null = eq last, 0
+    br last_null -> L_FAST_NULL, L_FAST_VALUE
+L_FAST_NULL:
+    !last_addr
+    !last
+    !last_null
+    jmp L_SEARCH_INIT
+L_FAST_VALUE:
+    last_val_addr = ptr_add last, BSTNode_value
+    last_value = load last_val_addr+0 as u64
+    !last_val_addr
+    ge_last = uge value, last_value
+    br ge_last -> L_FAST_HIGH, L_FAST_FAIL_VALUE
+L_FAST_FAIL_VALUE:
+    !last_addr
+    !last
+    !last_null
+    !last_value
+    !ge_last
+    jmp L_SEARCH_INIT
+L_FAST_HIGH:
+    high_addr = ptr_add bst, BST_last_high
+    high = load high_addr+0 as u64
+    below_high = ult value, high
+    br below_high -> L_FAST_RIGHT, L_FAST_FAIL_HIGH
+L_FAST_FAIL_HIGH:
+    !last_addr
+    !last
+    !last_null
+    !last_value
+    !ge_last
+    !high_addr
+    !high
+    !below_high
+    jmp L_SEARCH_INIT
+L_FAST_RIGHT:
+    right_addr = ptr_add last, BSTNode_right
+    right = load right_addr+0 as ptr
+    right_null = eq right, 0
+    br right_null -> L_FAST_ATTACH, L_FAST_FAIL_RIGHT
+L_FAST_FAIL_RIGHT:
+    !last_addr
+    !last
+    !last_null
+    !last_value
+    !ge_last
+    !high_addr
+    !high
+    !below_high
+    !right_addr
+    !right
+    !right_null
+    jmp L_SEARCH_INIT
+L_FAST_ATTACH:
+    new_fast = call @bst_node_new(value)
+    store right_addr+0, new_fast as ptr
+    store last_addr+0, new_fast as ptr
+    store high_addr+0, high as u64
+    !last_addr
+    !last
+    !last_null
+    !last_value
+    !ge_last
+    !high_addr
+    !high
+    !below_high
+    !right_addr
+    !right
+    !right_null
+    !new_fast
+    !root
+    !is_empty
+    jmp L_INC_LEN
+L_SEARCH_INIT:
+    curr_slot = stack_alloc 8
+    parent_slot = stack_alloc 8
+    high_slot = stack_alloc 8
+    store curr_slot+0, root as ptr
+    hi_zero = 0 as u64
+    high_start = sub hi_zero, 1
+    store high_slot+0, high_start as u64
+    !hi_zero
+    !high_start
+    jmp L_LOOP
+L_LOOP:
+    curr = load curr_slot+0 as ptr
+    curr_null = eq curr, 0
+    br curr_null -> L_INSERT_POS, L_BODY
+L_BODY:
+    store parent_slot+0, curr as ptr
+    val_addr = ptr_add curr, BSTNode_value
+    current = load val_addr+0 as u64
+    !val_addr
+    lt = ult value, current
+    br lt -> L_GO_LEFT, L_GO_RIGHT
+L_GO_LEFT:
+    left_addr = ptr_add curr, BSTNode_left
+    next_left = load left_addr+0 as ptr
+    !left_addr
+    store high_slot+0, current as u64
+    store curr_slot+0, next_left as ptr
+    !curr
+    !curr_null
+    !current
+    !lt
+    !next_left
+    jmp L_LOOP
+L_GO_RIGHT:
+    right_addr = ptr_add curr, BSTNode_right
+    next_right = load right_addr+0 as ptr
+    !right_addr
+    store curr_slot+0, next_right as ptr
+    !curr
+    !curr_null
+    !current
+    !lt
+    !next_right
+    jmp L_LOOP
+L_INSERT_POS:
+    parent = load parent_slot+0 as ptr
+    insert_high = load high_slot+0 as u64
+    new_node = call @bst_node_new(value)
+    parent_val_addr = ptr_add parent, BSTNode_value
+    parent_value = load parent_val_addr+0 as u64
+    !parent_val_addr
+    insert_left = ult value, parent_value
+    br insert_left -> L_SET_LEFT, L_SET_RIGHT
+L_SET_LEFT:
+    set_left_addr = ptr_add parent, BSTNode_left
+    store set_left_addr+0, new_node as ptr
+    !set_left_addr
+    last_addr_l = ptr_add bst, BST_last
+    store last_addr_l+0, new_node as ptr
+    !last_addr_l
+    last_high_addr_l = ptr_add bst, BST_last_high
+    store last_high_addr_l+0, parent_value as u64
+    !last_high_addr_l
+    !curr
+    !curr_null
+    !parent
+    !new_node
+    !insert_high
+    !parent_value
+    !insert_left
+    !root
+    !is_empty
+    jmp L_INC_LEN
+L_SET_RIGHT:
+    set_right_addr = ptr_add parent, BSTNode_right
+    store set_right_addr+0, new_node as ptr
+    !set_right_addr
+    last_addr_r = ptr_add bst, BST_last
+    store last_addr_r+0, new_node as ptr
+    !last_addr_r
+    last_high_addr_r = ptr_add bst, BST_last_high
+    store last_high_addr_r+0, insert_high as u64
+    !last_high_addr_r
+    !curr
+    !curr_null
+    !parent
+    !new_node
+    !insert_high
+    !parent_value
+    !insert_left
+    !root
+    !is_empty
+    jmp L_INC_LEN
+L_INC_LEN:
+    __addr = ptr_add bst, BST_len
+    len = load __addr+0 as u64
+    !__addr
+    next_len = add len, 1
+    __addr2 = ptr_add bst, BST_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    !next_len
+    !value
+    !bst
+    return
+
+@export sa_bst_search(&bst: ptr, value: u64) -> i32:
+L_ENTRY:
+    __addr = ptr_add bst, BST_root
+    root = load __addr+0 as ptr
+    !__addr
+    ok = call @bst_search_node(&root, value)
+    !root
+    !value
+    !bst
+    return ok
+
+@export sa_bst_min(&bst: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add bst, BST_root
+    root = load __addr+0 as ptr
+    !__addr
+    is_null = eq root, 0
+    br is_null -> L_EMPTY, L_HIT
+
+L_HIT:
+    result = call @bst_min_node(&root)
+    !is_null
+    !root
+    !bst
+    return result
+
+L_EMPTY:
+    !is_null
+    !root
+    !bst
+    return 0
+
+@export sa_bst_max(&bst: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add bst, BST_root
+    root = load __addr+0 as ptr
+    !__addr
+    is_null = eq root, 0
+    br is_null -> L_EMPTY, L_HIT
+
+L_HIT:
+    result = call @bst_max_node(&root)
+    !is_null
+    !root
+    !bst
+    return result
+
+L_EMPTY:
+    !is_null
+    !root
+    !bst
+    return 0

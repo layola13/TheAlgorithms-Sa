@@ -1,0 +1,22 @@
+@import "../data_structures/binary_search_tree.sa"
+@import "../data_structures/avl_tree.sa"
+@import "../data_structures/rb_tree.sa"
+@import "../data_structures/trie.sa"
+
+@test "trees core"():
+L_ENTRY:
+    b = call @sa_bst_new()
+    call @sa_bst_insert(&b, 10)
+    call @sa_bst_free(^b)
+    
+    a = call @sa_avl_new()
+    call @sa_avl_insert(&a, 10)
+    call @sa_avl_free(^a)
+    
+    r = call @sa_rb_new()
+    call @sa_rb_insert(&r, 10)
+    call @sa_rb_free(^r)
+    
+    t = call @sa_trie_new()
+    call @sa_trie_free(^t)
+    return

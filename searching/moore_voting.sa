@@ -1,0 +1,96 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@moore_rec(data: ptr, i: u64, n: u64, cand: u64, count: u64) -> u64:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    count_zero = eq count, 0
+    br count_zero -> L_NEW_CAND, L_CHECK_SAME
+L_NEW_CAND:
+    one_new = 1 as u64
+    next_i_new = add i, one_new
+    res_new = call @moore_rec(data, next_i_new, n, val, one_new)
+    !eight
+    !off
+    !p
+    !val
+    !count_zero
+    !one_new
+    !next_i_new
+    !done
+    return res_new
+L_CHECK_SAME:
+    same = eq val, cand
+    br same -> L_INC, L_DEC
+L_INC:
+    one_inc = 1 as u64
+    next_count = add count, one_inc
+    next_i_inc = add i, one_inc
+    res_inc = call @moore_rec(data, next_i_inc, n, cand, next_count)
+    !eight
+    !off
+    !p
+    !val
+    !count_zero
+    !same
+    !one_inc
+    !next_count
+    !next_i_inc
+    !done
+    return res_inc
+L_DEC:
+    one_dec = 1 as u64
+    next_count_dec = sub count, one_dec
+    next_i_dec = add i, one_dec
+    res_dec = call @moore_rec(data, next_i_dec, n, cand, next_count_dec)
+    !eight
+    !off
+    !p
+    !val
+    !count_zero
+    !same
+    !one_dec
+    !next_count_dec
+    !next_i_dec
+    !done
+    return res_dec
+L_DONE:
+    !done
+    return cand
+
+@export sa_moore_voting(&slice: ptr) -> u64:
+L_ENTRY:
+    len_addr = ptr_add slice, Slice_len
+    n = load len_addr+0 as u64
+    !len_addr
+    data_addr = ptr_add slice, Slice_ptr
+    data = load data_addr+0 as ptr
+    !data_addr
+    zero = 0 as u64
+    is_empty = eq n, zero
+    br is_empty -> L_EMPTY, L_START
+L_EMPTY:
+    !n
+    !data
+    !zero
+    !is_empty
+    !slice
+    return 0
+L_START:
+    first = load data+0 as u64
+    one = 1 as u64
+    res = call @moore_rec(data, one, n, first, one)
+    !n
+    !data
+    !zero
+    !is_empty
+    !first
+    !one
+    !slice
+    return res

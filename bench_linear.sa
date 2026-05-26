@@ -1,0 +1,157 @@
+@import "sa_std/time.sa"
+
+@fill_loop(data: ptr, n: u64) -> void:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    !zero
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    store p+0, i as u64
+    one = 1 as u64
+    ni = add i, one
+    store i_slot+0, ni as u64
+    !i
+    !done
+    !eight
+    !off
+    !p
+    !one
+    !ni
+    jmp L_LOOP
+L_DONE:
+    !i
+    !done
+    return
+
+@linear_search_loop(data: ptr, n: u64, target: u64) -> u64:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    !zero
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, n
+    br done -> L_NOT_FOUND, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    hit = eq val, target
+    br hit -> L_FOUND, L_NEXT
+L_NEXT:
+    one = 1 as u64
+    ni = add i, one
+    store i_slot+0, ni as u64
+    !i
+    !done
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    !one
+    !ni
+    jmp L_LOOP
+L_FOUND:
+    !i
+    !done
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    return 1
+L_NOT_FOUND:
+    !i
+    !done
+    return 0
+
+@search_loop(data: ptr, n: u64, count: u64, target: u64) -> u64:
+L_ENTRY:
+    i_slot = stack_alloc 8
+    sum_slot = stack_alloc 8
+    zero = 0 as u64
+    store i_slot+0, zero as u64
+    store sum_slot+0, zero as u64
+    !zero
+    jmp L_LOOP
+L_LOOP:
+    i = load i_slot+0 as u64
+    done = eq i, count
+    br done -> L_DONE, L_BODY
+L_BODY:
+    hit = call @linear_search_loop(data, n, target)
+    sum = load sum_slot+0 as u64
+    next_sum = add sum, hit
+    one = 1 as u64
+    ni = add i, one
+    store sum_slot+0, next_sum as u64
+    store i_slot+0, ni as u64
+    !i
+    !done
+    !hit
+    !sum
+    !next_sum
+    !one
+    !ni
+    jmp L_LOOP
+L_DONE:
+    total = load sum_slot+0 as u64
+    !i
+    !done
+    return total
+
+@main() -> i32:
+L_ENTRY:
+    n = 1000 as u64
+    eight = 8 as u64
+    bytes = mul n, eight
+    data = alloc bytes
+    call @fill_loop(data, n)
+    count = 1000000 as u64
+    target = 999 as u64
+    start = call @sa_time_instant_ns()
+    sum = call @search_loop(data, n, count, target)
+    end = call @sa_time_instant_ns()
+    ok = eq sum, count
+    br ok -> L_OK, L_FAIL
+L_FAIL:
+    !data
+    !eight
+    !bytes
+    !count
+    !target
+    !start
+    !end
+    !sum
+    return 255
+L_OK:
+    diff = sub end, start
+    mill = 1000000 as u64
+    res = udiv diff, mill
+    res_i = zext res as i32
+    !data
+    !eight
+    !bytes
+    !count
+    !target
+    !start
+    !end
+    !sum
+    !diff
+    !mill
+    !res
+    !n
+    return res_i

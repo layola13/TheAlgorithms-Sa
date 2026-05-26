@@ -1,0 +1,75 @@
+@import "../data_structures/veb_tree.sa"
+
+@test "veb membership min max successor predecessor"():
+L_ENTRY:
+    v = call @sa_veb_new(16)
+    empty0 = call @sa_veb_is_empty(&v)
+    call @sa_veb_insert(&v, 5)
+    call @sa_veb_insert(&v, 2)
+    call @sa_veb_insert(&v, 9)
+    f5 = call @sa_veb_search(&v, 5)
+    f3 = call @sa_veb_search(&v, 3)
+    mn = call @sa_veb_min(&v)
+    mx = call @sa_veb_max(&v)
+    succ = call @sa_veb_successor(&v, 5)
+    pred = call @sa_veb_predecessor(&v, 5)
+    ok0 = eq empty0, 1
+    ok1 = eq f5, 1
+    ok2 = eq f3, 0
+    ok3 = eq mn, 2
+    ok4 = eq mx, 9
+    ok5 = eq succ, 9
+    ok6 = eq pred, 2
+    a = and ok0, ok1
+    b = and ok2, ok3
+    c = and ok4, ok5
+    d = and a, b
+    e = and c, ok6
+    ok = and d, e
+    br ok -> L_OK, L_FAIL
+L_OK:
+    call @veb_free(^v)
+    !empty0
+    !f5
+    !f3
+    !mn
+    !mx
+    !succ
+    !pred
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok
+    return
+L_FAIL:
+    call @veb_free(^v)
+    !empty0
+    !f5
+    !f3
+    !mn
+    !mx
+    !succ
+    !pred
+    !ok0
+    !ok1
+    !ok2
+    !ok3
+    !ok4
+    !ok5
+    !ok6
+    !a
+    !b
+    !c
+    !d
+    !e
+    !ok
+    panic(1)

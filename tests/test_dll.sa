@@ -1,0 +1,18 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/sa_core.sa"
+@import "../data_structures/doubly_linked_list.sa"
+
+@test "dll"():
+L_ENTRY:
+    obj = call @sa_dll_new()
+    call @sa_dll_push_front(&obj, 1, 10)
+    __addr = ptr_add obj, DLL_len
+    lv = load __addr+0 as u64
+    !__addr
+    ok = eq lv, 1
+    call @sa_dll_free(^obj)
+    br ok -> L_OK, L_FAIL
+L_OK:
+    return
+L_FAIL:
+    panic(103)

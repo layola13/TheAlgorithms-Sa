@@ -1,0 +1,7 @@
+#def LRU_capacity = +0
+#def LRU_len = +8
+#def LRU_key0 = +16
+#def LRU_value0 = +24
+#def LRU_key1 = +32
+#def LRU_value1 = +40
+#def LRU_SIZE = 48

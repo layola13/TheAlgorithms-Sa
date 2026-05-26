@@ -1,0 +1,66 @@
+@import "../data_structures/binary_search_tree.sa"
+@import "../data_structures/avl_tree.sa"
+@import "../data_structures/rb_tree.sa"
+@import "../data_structures/splay_tree.sa"
+@import "../data_structures/trie.sa"
+@import "../data_structures/b_tree.sa"
+@import "../data_structures/veb_tree.sa"
+
+@test "tree bst"():
+L_ENTRY:
+    b = call @sa_bst_new()
+    call @sa_bst_insert(&b, 10)
+    f = call @sa_bst_search(&b, 10)
+    call @sa_bst_free(^b)
+    !f
+    return
+
+@test "tree avl"():
+L_ENTRY:
+    a = call @sa_avl_new()
+    call @sa_avl_insert(&a, 10)
+    call @sa_avl_free(^a)
+    return
+
+@test "tree rb"():
+L_ENTRY:
+    r = call @sa_rb_new()
+    call @sa_rb_insert(&r, 10)
+    call @sa_rb_free(^r)
+    return
+
+@test "tree splay"():
+L_ENTRY:
+    s = alloc 24
+    store s+0, 10 as u64
+    store s+8, 0 as ptr
+    store s+16, 0 as ptr
+    res = call @splay(^s, 10)
+    !res
+    return
+
+@test "tree trie"():
+L_ENTRY:
+    t = call @sa_trie_new()
+    d = stack_alloc 1
+    store d+0, 97 as u8
+    s = stack_alloc 16
+    store s+0, d as ptr
+    store s+8, 1 as u64
+    call @sa_trie_insert(&t, &s)
+    call @sa_trie_free(^t)
+    return
+
+@test "tree btree"():
+L_ENTRY:
+    bt = call @sa_btree_new()
+    call @sa_btree_insert(&bt, 10)
+    call @sa_btree_free(^bt)
+    return
+
+@test "tree veb"():
+L_ENTRY:
+    v = call @sa_veb_new(16)
+    call @sa_veb_insert(&v, 5)
+    call @veb_free(^v)
+    return

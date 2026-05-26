@@ -1,0 +1,179 @@
+@import "sa_std/core/mem.sa"
+@import "b_tree.sal"
+
+@btree_node_new(is_leaf: i32) -> ^ptr:
+L_ENTRY:
+    node = alloc BTreeNode_SIZE
+    eight = 8 as u64
+    key_slots = BTREE_MAX_KEYS as u64
+    key_bytes = mul key_slots, eight
+    keys = alloc key_bytes
+    child_slots = BTREE_MAX_CHILDREN as u64
+    child_bytes = mul child_slots, eight
+    children = alloc child_bytes
+    store node+BTreeNode_keys, keys as ptr
+    store node+BTreeNode_children, children as ptr
+    zero = 0 as i32
+    store node+BTreeNode_num_keys, zero as i32
+    store node+BTreeNode_is_leaf, is_leaf as i32
+    !eight
+    !key_slots
+    !key_bytes
+    !child_slots
+    !child_bytes
+    !zero
+    return node
+
+@btree_insert_rec(keys: ptr, i: i32, num: i32, value: u64) -> i32:
+L_ENTRY:
+    done = eq i, num
+    br done -> L_APPEND, L_CHECK
+L_CHECK:
+    i64 = sext i as u64
+    eight = 8 as u64
+    off = mul i64, eight
+    p = ptr_add keys, off
+    curr = load p+0 as u64
+    same = eq curr, value
+    br same -> L_EXISTS, L_NEXT
+L_NEXT:
+    one = 1 as i32
+    ni = add i, one
+    res = call @btree_insert_rec(keys, ni, num, value)
+    !i64
+    !eight
+    !off
+    !p
+    !curr
+    !same
+    !one
+    !ni
+    !done
+    return res
+L_EXISTS:
+    !i64
+    !eight
+    !off
+    !p
+    !curr
+    !same
+    !done
+    return num
+L_APPEND:
+    max_k = BTREE_MAX_KEYS as i32
+    full = eq num, max_k
+    br full -> L_FULL, L_STORE
+L_FULL:
+    !max_k
+    !full
+    !done
+    return num
+L_STORE:
+    num64 = sext num as u64
+    eight2 = 8 as u64
+    off2 = mul num64, eight2
+    p2 = ptr_add keys, off2
+    store p2+0, value as u64
+    one2 = 1 as i32
+    next_num = add num, one2
+    !max_k
+    !full
+    !num64
+    !eight2
+    !off2
+    !p2
+    !one2
+    !done
+    return next_num
+
+@btree_search_rec(keys: ptr, i: i32, num: i32, value: u64) -> i32:
+L_ENTRY:
+    done = eq i, num
+    br done -> L_NOT_FOUND, L_BODY
+L_BODY:
+    i64 = sext i as u64
+    eight = 8 as u64
+    off = mul i64, eight
+    p = ptr_add keys, off
+    curr = load p+0 as u64
+    same = eq curr, value
+    br same -> L_FOUND, L_NEXT
+L_NEXT:
+    one = 1 as i32
+    ni = add i, one
+    res = call @btree_search_rec(keys, ni, num, value)
+    !i64
+    !eight
+    !off
+    !p
+    !curr
+    !same
+    !one
+    !ni
+    !done
+    return res
+L_FOUND:
+    !i64
+    !eight
+    !off
+    !p
+    !curr
+    !same
+    !done
+    return 1
+L_NOT_FOUND:
+    !done
+    return 0
+
+@export sa_btree_new() -> ^ptr:
+L_ENTRY:
+    tree = alloc BTree_SIZE
+    root = call @btree_node_new(1)
+    store tree+BTree_root, root as ptr
+    return tree
+
+@export sa_btree_insert(&tree: ptr, k: u64) -> void:
+L_ENTRY:
+    root = load tree+BTree_root as ptr
+    keys = load root+BTreeNode_keys as ptr
+    num = load root+BTreeNode_num_keys as i32
+    zero = 0 as i32
+    next_num = call @btree_insert_rec(keys, zero, num, k)
+    store root+BTreeNode_num_keys, next_num as i32
+    !root
+    !keys
+    !num
+    !zero
+    !next_num
+    !tree
+    return
+
+@export sa_btree_search(&tree: ptr, key: u64) -> i32:
+L_ENTRY:
+    root = load tree+BTree_root as ptr
+    keys = load root+BTreeNode_keys as ptr
+    num = load root+BTreeNode_num_keys as i32
+    zero = 0 as i32
+    res = call @btree_search_rec(keys, zero, num, key)
+    !root
+    !keys
+    !num
+    !zero
+    !tree
+    return res
+
+@btree_node_free(^node: ptr) -> void:
+L_ENTRY:
+    keys = load node+BTreeNode_keys as ptr
+    children = load node+BTreeNode_children as ptr
+    !keys
+    !children
+    !node
+    return
+
+@export sa_btree_free(^tree: ptr) -> void:
+L_ENTRY:
+    root = load tree+BTree_root as ptr
+    call @btree_node_free(^root)
+    !tree
+    return

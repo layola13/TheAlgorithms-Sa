@@ -1,0 +1,207 @@
+@import "lru_cache.sal"
+
+@lru_clear(&self: ptr) -> void:
+L_ENTRY:
+    store self+LRU_len, 0 as u64
+    store self+LRU_key0, 0 as u64
+    store self+LRU_value0, 0 as u64
+    store self+LRU_key1, 0 as u64
+    store self+LRU_value1, 0 as u64
+    !self
+    return
+
+@export sa_lru_new(cap: u64) -> ^ptr:
+L_ENTRY:
+    obj = alloc LRU_SIZE
+    store obj+LRU_capacity, cap as u64
+    call @lru_clear(&obj)
+    return obj
+
+@export sa_lru_get(&self: ptr, key: u64) -> u64:
+L_ENTRY:
+    len = load self+LRU_len as u64
+    has0 = ugt len, 0
+    br has0 -> L_CHECK0, L_MISS
+
+L_CHECK0:
+    key0 = load self+LRU_key0 as u64
+    hit0 = eq key0, key
+    br hit0 -> L_HIT0, L_CHECK1
+
+L_HIT0:
+    value0 = load self+LRU_value0 as u64
+    !key0
+    !hit0
+    !has0
+    !len
+    !self
+    return value0
+
+L_CHECK1:
+    has1 = ugt len, 1
+    br has1 -> L_CHECK1_KEY, L_MISS_AFTER0
+
+L_CHECK1_KEY:
+    key1 = load self+LRU_key1 as u64
+    hit1 = eq key1, key
+    br hit1 -> L_HIT1, L_MISS_AFTER1
+
+L_HIT1:
+    value1 = load self+LRU_value1 as u64
+    old_key0 = load self+LRU_key0 as u64
+    old_value0 = load self+LRU_value0 as u64
+    store self+LRU_key0, key1 as u64
+    store self+LRU_value0, value1 as u64
+    store self+LRU_key1, old_key0 as u64
+    store self+LRU_value1, old_value0 as u64
+    !old_key0
+    !old_value0
+    !key1
+    !hit1
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !self
+    return value1
+
+L_MISS_AFTER1:
+    !key1
+    !hit1
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !self
+    return 0
+
+L_MISS_AFTER0:
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !self
+    return 0
+
+L_MISS:
+    !has0
+    !len
+    !self
+    return 0
+
+@export sa_lru_put(&self: ptr, key: u64, value: u64) -> void:
+L_ENTRY:
+    cap = load self+LRU_capacity as u64
+    can_store = ugt cap, 0
+    br can_store -> L_BODY, L_DONE_EMPTY
+
+L_BODY:
+    len = load self+LRU_len as u64
+    has0 = ugt len, 0
+    br has0 -> L_CHECK0, L_INSERT0
+
+L_CHECK0:
+    key0 = load self+LRU_key0 as u64
+    hit0 = eq key0, key
+    br hit0 -> L_UPDATE0, L_CHECK1
+
+L_UPDATE0:
+    store self+LRU_value0, value as u64
+    !key0
+    !hit0
+    !has0
+    !len
+    !can_store
+    !cap
+    !self
+    return
+
+L_CHECK1:
+    has1 = ugt len, 1
+    br has1 -> L_CHECK1_KEY, L_INSERT1
+
+L_CHECK1_KEY:
+    key1 = load self+LRU_key1 as u64
+    hit1 = eq key1, key
+    br hit1 -> L_UPDATE1, L_INSERT_FULL
+
+L_UPDATE1:
+    old_key0 = load self+LRU_key0 as u64
+    old_value0 = load self+LRU_value0 as u64
+    store self+LRU_key0, key as u64
+    store self+LRU_value0, value as u64
+    store self+LRU_key1, old_key0 as u64
+    store self+LRU_value1, old_value0 as u64
+    !old_key0
+    !old_value0
+    !key1
+    !hit1
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !can_store
+    !cap
+    !self
+    return
+
+L_INSERT_FULL:
+    old_key0 = load self+LRU_key0 as u64
+    old_value0 = load self+LRU_value0 as u64
+    store self+LRU_key0, key as u64
+    store self+LRU_value0, value as u64
+    store self+LRU_key1, old_key0 as u64
+    store self+LRU_value1, old_value0 as u64
+    !old_key0
+    !old_value0
+    !key1
+    !hit1
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !can_store
+    !cap
+    !self
+    return
+
+L_INSERT1:
+    store self+LRU_key1, key as u64
+    store self+LRU_value1, value as u64
+    store self+LRU_len, 2 as u64
+    !has1
+    !key0
+    !hit0
+    !has0
+    !len
+    !can_store
+    !cap
+    !self
+    return
+
+L_INSERT0:
+    store self+LRU_key0, key as u64
+    store self+LRU_value0, value as u64
+    store self+LRU_len, 1 as u64
+    !has0
+    !len
+    !can_store
+    !cap
+    !self
+    return
+
+L_DONE_EMPTY:
+    !can_store
+    !cap
+    !self
+    return
+
+@export sa_lru_free(^self: ptr) -> void:
+L_ENTRY:
+    !self
+    return

@@ -1,0 +1,182 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@ternary_search_rec(data: ptr, low: u64, high: u64, target: u64) -> i64:
+L_ENTRY:
+    done = ugt low, high
+    br done -> L_NOT_FOUND, L_BODY
+L_BODY:
+    diff = sub high, low
+    three = 3 as u64
+    third = udiv diff, three
+    m1 = add low, third
+    m2 = sub high, third
+    eight = 8 as u64
+
+    off1 = mul m1, eight
+    p1 = ptr_add data, off1
+    v1 = load p1+0 as u64
+    hit1 = eq v1, target
+    br hit1 -> L_FOUND1, L_CHECK2
+
+L_FOUND1:
+    m1_i = bitcast m1 as i64
+    !diff
+    !three
+    !third
+    !m2
+    !eight
+    !off1
+    !p1
+    !v1
+    !hit1
+    !done
+    !m1
+    return m1_i
+
+L_CHECK2:
+    off2 = mul m2, eight
+    p2 = ptr_add data, off2
+    v2 = load p2+0 as u64
+    hit2 = eq v2, target
+    br hit2 -> L_FOUND2, L_COMPARE
+
+L_FOUND2:
+    m2_i = bitcast m2 as i64
+    !diff
+    !three
+    !third
+    !m1
+    !eight
+    !off1
+    !p1
+    !v1
+    !hit1
+    !off2
+    !p2
+    !v2
+    !hit2
+    !done
+    !m2
+    return m2_i
+
+L_COMPARE:
+    is_left = ult target, v1
+    br is_left -> L_LEFT, L_CHECK_RIGHT
+
+L_LEFT:
+    one = 1 as u64
+    next_high = sub m1, one
+    res_left = call @ternary_search_rec(data, low, next_high, target)
+    !diff
+    !three
+    !third
+    !m1
+    !m2
+    !eight
+    !off1
+    !p1
+    !v1
+    !hit1
+    !off2
+    !p2
+    !v2
+    !hit2
+    !is_left
+    !one
+    !next_high
+    !done
+    return res_left
+
+L_CHECK_RIGHT:
+    is_right = ugt target, v2
+    br is_right -> L_RIGHT, L_MIDDLE
+
+L_RIGHT:
+    one2 = 1 as u64
+    next_low = add m2, one2
+    res_right = call @ternary_search_rec(data, next_low, high, target)
+    !diff
+    !three
+    !third
+    !m1
+    !m2
+    !eight
+    !off1
+    !p1
+    !v1
+    !hit1
+    !off2
+    !p2
+    !v2
+    !hit2
+    !is_left
+    !is_right
+    !one2
+    !next_low
+    !done
+    return res_right
+
+L_MIDDLE:
+    one3 = 1 as u64
+    next_low2 = add m1, one3
+    next_high2 = sub m2, one3
+    res_mid = call @ternary_search_rec(data, next_low2, next_high2, target)
+    !diff
+    !three
+    !third
+    !m1
+    !m2
+    !eight
+    !off1
+    !p1
+    !v1
+    !hit1
+    !off2
+    !p2
+    !v2
+    !hit2
+    !is_left
+    !is_right
+    !one3
+    !next_low2
+    !next_high2
+    !done
+    return res_mid
+
+L_NOT_FOUND:
+    !done
+    return -1
+
+@export sa_ternary_search(&slice: ptr, target: u64) -> i64:
+L_ENTRY:
+    len_addr = ptr_add slice, Slice_len
+    n = load len_addr+0 as u64
+    !len_addr
+    data_addr = ptr_add slice, Slice_ptr
+    data = load data_addr+0 as ptr
+    !data_addr
+    zero = 0 as u64
+    is_empty = eq n, zero
+    br is_empty -> L_NOT_FOUND, L_START
+L_START:
+    one = 1 as u64
+    high = sub n, one
+    res = call @ternary_search_rec(data, zero, high, target)
+    !n
+    !data
+    !zero
+    !is_empty
+    !one
+    !high
+    !target
+    !slice
+    return res
+L_NOT_FOUND:
+    !n
+    !data
+    !zero
+    !is_empty
+    !target
+    !slice
+    return -1

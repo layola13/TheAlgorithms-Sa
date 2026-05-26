@@ -1,0 +1,14 @@
+@import "../data_structures/b_tree.sa"
+@test "btree"():
+L_ENTRY:
+    bt = call @sa_btree_new()
+    call @sa_btree_insert(&bt, 42)
+    found = call @sa_btree_search(&bt, 42)
+    ok = eq found, 1
+    !found
+    call @sa_btree_free(^bt)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(205)

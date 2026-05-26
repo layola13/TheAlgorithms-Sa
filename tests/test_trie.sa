@@ -1,0 +1,25 @@
+@import "sa_std/core/slice.sal"
+@import "../data_structures/trie.sa"
+@test "trie"():
+L_ENTRY:
+    t = call @sa_trie_new()
+    data = stack_alloc 1
+    store data+0, 97 as u8 
+    s = stack_alloc 16
+    __addr2 = ptr_add s, Slice_ptr
+    store __addr2+0, data as ptr
+    !__addr2
+    __addr2 = ptr_add s, Slice_len
+    store __addr2+0, 1 as u64
+    !__addr2
+    
+    call @sa_trie_insert(&t, &s)
+    found = call @sa_trie_search(&t, &s)
+    ok = eq found, 1
+    !found
+    call @sa_trie_free(^t)
+    br ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(204)

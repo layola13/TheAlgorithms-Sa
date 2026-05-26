@@ -1,0 +1,10 @@
+#def DLLNode_key = +0
+#def DLLNode_value = +8
+#def DLLNode_prev = +16
+#def DLLNode_next = +24
+#def DLLNode_SIZE = 32
+
+#def DLL_head = +0
+#def DLL_tail = +8
+#def DLL_len = +16
+#def DLL_SIZE = 24

@@ -1,0 +1,49 @@
+@import "../common/arrays.sal"
+@import "sa_std/core/slice.sal"
+
+@linear_search_rec(data: ptr, idx: u64, len: u64, target: u64) -> i64:
+L_ENTRY:
+    done = eq idx, len
+    br done -> L_NOT_FOUND, L_BODY
+L_BODY:
+    off = mul idx, U64_SIZE
+    ip = ptr_add data, off
+    value = load ip+0 as u64
+    hit = eq value, target
+    br hit -> L_FOUND, L_NEXT
+L_NEXT:
+    one = 1 as u64
+    next_idx = add idx, one
+    res = call @linear_search_rec(data, next_idx, len, target)
+    !off
+    !ip
+    !value
+    !hit
+    !one
+    !next_idx
+    !done
+    return res
+L_FOUND:
+    idx_i = bitcast idx as i64
+    !off
+    !ip
+    !value
+    !hit
+    !done
+    return idx_i
+L_NOT_FOUND:
+    !done
+    return -1
+
+@export sa_linear_search_u64(&slice: ptr, target: u64) -> i64:
+L_ENTRY:
+    len = load slice+Slice_len as u64
+    data = load slice+Slice_ptr as ptr
+    zero = 0 as u64
+    res = call @linear_search_rec(data, zero, len, target)
+    !len
+    !data
+    !zero
+    !target
+    !slice
+    return res

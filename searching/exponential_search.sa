@@ -1,0 +1,194 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@exp_bound_rec(data: ptr, idx: u64, n: u64, target: u64) -> u64:
+L_ENTRY:
+    done = uge idx, n
+    br done -> L_LIMIT, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul idx, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    too_high = ugt val, target
+    br too_high -> L_RETURN_IDX, L_NEXT
+L_NEXT:
+    two = 2 as u64
+    next_idx = mul idx, two
+    res = call @exp_bound_rec(data, next_idx, n, target)
+    !eight
+    !off
+    !p
+    !val
+    !too_high
+    !two
+    !next_idx
+    !done
+    return res
+L_RETURN_IDX:
+    !eight
+    !off
+    !p
+    !val
+    !too_high
+    !done
+    return idx
+L_LIMIT:
+    !done
+    return n
+
+@exp_binary_rec(data: ptr, low: u64, high: u64, target: u64) -> i64:
+L_ENTRY:
+    done = ugt low, high
+    br done -> L_NOT_FOUND, L_BODY
+L_BODY:
+    sum = add low, high
+    two = 2 as u64
+    mid = udiv sum, two
+    eight = 8 as u64
+    off = mul mid, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    hit = eq val, target
+    br hit -> L_FOUND, L_COMPARE
+L_COMPARE:
+    is_lt = ult val, target
+    br is_lt -> L_RIGHT, L_LEFT_CHECK
+L_RIGHT:
+    one = 1 as u64
+    next_low = add mid, one
+    res = call @exp_binary_rec(data, next_low, high, target)
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    !is_lt
+    !one
+    !next_low
+    !done
+    return res
+L_LEFT_CHECK:
+    zero = 0 as u64
+    at_zero = eq mid, zero
+    br at_zero -> L_NOT_FOUND_LEFT, L_LEFT
+L_LEFT:
+    one2 = 1 as u64
+    next_high = sub mid, one2
+    res2 = call @exp_binary_rec(data, low, next_high, target)
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    !is_lt
+    !zero
+    !at_zero
+    !one2
+    !next_high
+    !done
+    return res2
+L_NOT_FOUND_LEFT:
+    !sum
+    !two
+    !mid
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    !is_lt
+    !zero
+    !at_zero
+    !done
+    return -1
+L_FOUND:
+    mid_i = bitcast mid as i64
+    !sum
+    !two
+    !eight
+    !off
+    !p
+    !val
+    !hit
+    !done
+    !mid
+    return mid_i
+L_NOT_FOUND:
+    !done
+    return -1
+
+@export sa_exponential_search(&slice: ptr, target: u64) -> i64:
+L_ENTRY:
+    len_addr = ptr_add slice, Slice_len
+    n = load len_addr+0 as u64
+    !len_addr
+    data_addr = ptr_add slice, Slice_ptr
+    data = load data_addr+0 as ptr
+    !data_addr
+    zero = 0 as u64
+    is_empty = eq n, zero
+    br is_empty -> L_NOT_FOUND, L_CHECK_FIRST
+L_CHECK_FIRST:
+    first = load data+0 as u64
+    hit_first = eq first, target
+    br hit_first -> L_FOUND_FIRST, L_SEARCH
+L_FOUND_FIRST:
+    !n
+    !data
+    !zero
+    !is_empty
+    !first
+    !hit_first
+    !target
+    !slice
+    return 0
+L_SEARCH:
+    one = 1 as u64
+    bound = call @exp_bound_rec(data, one, n, target)
+    ge_len = uge bound, n
+    br ge_len -> L_USE_END, L_USE_BOUND
+L_USE_END:
+    high = sub n, one
+    res = call @exp_binary_rec(data, one, high, target)
+    !n
+    !data
+    !zero
+    !is_empty
+    !first
+    !hit_first
+    !one
+    !bound
+    !ge_len
+    !high
+    !target
+    !slice
+    return res
+L_USE_BOUND:
+    res2 = call @exp_binary_rec(data, one, bound, target)
+    !n
+    !data
+    !zero
+    !is_empty
+    !first
+    !hit_first
+    !one
+    !bound
+    !ge_len
+    !target
+    !slice
+    return res2
+L_NOT_FOUND:
+    !n
+    !data
+    !zero
+    !is_empty
+    !target
+    !slice
+    return -1

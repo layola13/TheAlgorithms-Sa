@@ -1,0 +1,152 @@
+@import "fenwick_tree.sal"
+
+@ft_zero_buf(&buf: ptr, index: u64, slots: u64) -> void:
+L_ENTRY:
+    done = eq index, slots
+    br done -> L_DONE, L_BODY
+L_BODY:
+    off = mul index, 8
+    ip = ptr_add buf, off
+    store ip+0, 0 as u64
+    next = add index, 1
+    call @ft_zero_buf(&buf, next, slots)
+    return
+L_DONE:
+    return
+
+@export sa_fenwick_new(capacity: u64) -> ^ptr:
+L_ENTRY:
+    tree = alloc Fenwick_SIZE
+    slots = add capacity, 1
+    bytes = mul slots, 8
+    buf = alloc bytes
+    call @ft_zero_buf(&buf, 0, slots)
+    __addr2 = ptr_add tree, Fenwick_data
+    store __addr2+0, buf as ptr
+    !__addr2
+    __addr2 = ptr_add tree, Fenwick_len
+    store __addr2+0, capacity as u64
+    !__addr2
+    return tree
+
+@ft_update_rec(data: ptr, idx: u64, limit: u64, delta: u64) -> void:
+L_ENTRY:
+    within = ule idx, limit
+    br within -> L_BODY, L_DONE
+L_BODY:
+    off = mul idx, 8
+    ip = ptr_add data, off
+    current = load ip+0 as u64
+    next_val = add current, delta
+    store ip+0, next_val as u64
+    neg = sub 0, idx
+    step = and idx, neg
+    next_idx = add idx, step
+    call @ft_update_rec(data, next_idx, limit, delta)
+    return
+L_DONE:
+    return
+
+@export sa_fenwick_update(&tree: ptr, index: u64, delta: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add tree, Fenwick_len
+    len = load __addr+0 as u64
+    !__addr
+    in_range = ult index, len
+    br in_range -> L_OK, L_DONE
+L_OK:
+    __addr = ptr_add tree, Fenwick_data
+    data = load __addr+0 as ptr
+    !__addr
+    idx = add index, 1
+    call @ft_update_rec(data, idx, len, delta)
+L_DONE:
+    return
+
+@ft_prefix_rec(data: ptr, idx: u64, result: u64) -> u64:
+L_ENTRY:
+    nonzero = ne idx, 0
+    br nonzero -> L_BODY, L_DONE
+L_BODY:
+    off = mul idx, 8
+    ip = ptr_add data, off
+    value = load ip+0 as u64
+    next_result = add result, value
+    neg = sub 0, idx
+    step = and idx, neg
+    next_idx = sub idx, step
+    ret = call @ft_prefix_rec(data, next_idx, next_result)
+    return ret
+L_DONE:
+    return result
+
+@export sa_fenwick_prefix(&tree: ptr, index: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add tree, Fenwick_len
+    len = load __addr+0 as u64
+    !__addr
+    in_range = ult index, len
+    br in_range -> L_OK, L_OOB
+L_OK:
+    __addr = ptr_add tree, Fenwick_data
+    data = load __addr+0 as ptr
+    !__addr
+    idx = add index, 1
+    res = call @ft_prefix_rec(data, idx, 0)
+    return res
+L_OOB:
+    return 0
+
+@export sa_fenwick_get(&tree: ptr, index: u64) -> u64:
+L_ENTRY:
+    cur = call @sa_fenwick_prefix(&tree, index)
+    is_zero = eq index, 0
+    br is_zero -> L_FIRST, L_REST
+L_FIRST:
+    !is_zero
+    return cur
+L_REST:
+    prev_index = sub index, 1
+    prev = call @sa_fenwick_prefix(&tree, prev_index)
+    value = sub cur, prev
+    !cur
+    !prev
+    !prev_index
+    !is_zero
+    return value
+
+@export sa_fenwick_set(&tree: ptr, index: u64, value: u64) -> void:
+L_ENTRY:
+    old = call @sa_fenwick_get(&tree, index)
+    delta = sub value, old
+    call @sa_fenwick_update(&tree, index, delta)
+    !old
+    !delta
+    return
+
+@export sa_fenwick_range(&tree: ptr, left: u64, right: u64) -> u64:
+L_ENTRY:
+    total = call @sa_fenwick_prefix(&tree, right)
+    is_zero = eq left, 0
+    br is_zero -> L_FROM_ZERO, L_AFTER_LEFT
+L_FROM_ZERO:
+    !is_zero
+    return total
+L_AFTER_LEFT:
+    prev_index = sub left, 1
+    before = call @sa_fenwick_prefix(&tree, prev_index)
+    value = sub total, before
+    !total
+    !before
+    !prev_index
+    !is_zero
+    return value
+
+@export sa_fenwick_free(^tree: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add tree, Fenwick_data
+    data = load __addr+0 as ptr
+    !__addr
+    !data
+    !tree
+    return

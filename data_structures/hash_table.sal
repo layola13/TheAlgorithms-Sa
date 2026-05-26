@@ -1,0 +1,3 @@
+#def HashTable_SIZE = 16
+#def HashTable_keys = +0
+#def HashTable_values = +8

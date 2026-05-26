@@ -1,0 +1,12 @@
+#def BTREE_T = 3
+#def BTREE_MAX_KEYS = 5
+#def BTREE_MAX_CHILDREN = 6
+
+#def BTreeNode_keys = +0
+#def BTreeNode_children = +8
+#def BTreeNode_num_keys = +16
+#def BTreeNode_is_leaf = +20
+#def BTreeNode_SIZE = 24
+
+#def BTree_root = +0
+#def BTree_SIZE = 8

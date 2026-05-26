@@ -1,0 +1,9 @@
+@import "../common/algorithms.sa"
+
+@import "heap_sort.sa"
+@import "merge_sort.sa"
+@import "counting_sort.sa"
+@import "radix_sort.sa"
+@import "bubble_sort.sa"
+@import "selection_sort.sa"
+@import "insertion_sort.sa"

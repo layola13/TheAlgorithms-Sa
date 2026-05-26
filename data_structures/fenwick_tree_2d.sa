@@ -1,0 +1,128 @@
+@import "sa_std/core/mem.sa"
+@import "fenwick_tree_2d.sal"
+
+@export sa_fenwick_2d_new(rows: u64, cols: u64) -> ^ptr:
+L_ENTRY:
+    ft = alloc Fenwick2D_SIZE
+    __addr2 = ptr_add ft, Fenwick2D_rows
+    store __addr2+0, rows as u64
+    !__addr2
+    __addr2 = ptr_add ft, Fenwick2D_cols
+    store __addr2+0, cols as u64
+    !__addr2
+    bytes = mul rows, cols
+    bytes = mul bytes, 8
+    data = alloc bytes
+    __addr2 = ptr_add ft, Fenwick2D_data
+    store __addr2+0, data as ptr
+    !__addr2
+    return ft
+
+@export sa_fenwick_2d_update(&ft: ptr, r: u64, c: u64, val: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add ft, Fenwick2D_rows
+    rows = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add ft, Fenwick2D_cols
+    cols = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add ft, Fenwick2D_data
+    data = load __addr+0 as ptr
+    !__addr
+    
+    r_slot = stack_alloc 8
+    store r_slot+0, add r, 1 as u64
+L_ROW_LOOP:
+    curr_r = load r_slot+0 as u64
+    done_r = ugt curr_r, rows
+    br done_r -> L_DONE, L_ROW_BODY
+L_ROW_BODY:
+    c_slot = stack_alloc 8
+    store c_slot+0, add c, 1 as u64
+L_COL_LOOP:
+    curr_c = load c_slot+0 as u64
+    done_c = ugt curr_c, cols
+    br done_c -> L_ROW_NEXT, L_COL_BODY
+L_COL_BODY:
+    off = mul sub curr_r, 1, cols
+    off = add off, sub curr_c, 1
+    off = mul off, 8
+    __addr = ptr_add data, off
+    cur_val = load __addr+0 as u64
+    !__addr
+    __addr2 = ptr_add data, off
+    store __addr2+0, add
+    !__addr2 cur_val, val as u64
+    
+
+    neg_c = sub 0, curr_c
+    bit = and curr_c, neg_c
+    store c_slot+0, add curr_c, bit as u64
+    jmp L_COL_LOOP
+
+L_ROW_NEXT:
+    neg_r = sub 0, curr_r
+    bit_r = and curr_r, neg_r
+    store r_slot+0, add curr_r, bit_r as u64
+    jmp L_ROW_LOOP
+
+L_DONE:
+    return
+
+@export sa_fenwick_2d_query(&ft: ptr, r: u64, c: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add ft, Fenwick2D_cols
+    cols = load __addr+0 as u64
+    !__addr
+    __addr = ptr_add ft, Fenwick2D_data
+    data = load __addr+0 as ptr
+    !__addr
+    res_slot = stack_alloc 8
+    store res_slot+0, 0 as u64
+    
+    r_slot = stack_alloc 8
+    store r_slot+0, add r, 1 as u64
+L_ROW_LOOP:
+    curr_r = load r_slot+0 as u64
+    done_r = eq curr_r, 0
+    br done_r -> L_DONE, L_ROW_BODY
+L_ROW_BODY:
+    c_slot = stack_alloc 8
+    store c_slot+0, add c, 1 as u64
+L_COL_LOOP:
+    curr_c = load c_slot+0 as u64
+    done_c = eq curr_c, 0
+    br done_c -> L_ROW_NEXT, L_COL_BODY
+L_COL_BODY:
+    off = mul sub curr_r, 1, cols
+    off = add off, sub curr_c, 1
+    off = mul off, 8
+    __addr = ptr_add data, off
+    val = load __addr+0 as u64
+    !__addr
+    cur_res = load res_slot+0 as u64
+    store res_slot+0, add cur_res, val as u64
+    
+    neg_c = sub 0, curr_c
+    bit = and curr_c, neg_c
+    store c_slot+0, sub curr_c, bit as u64
+    jmp L_COL_LOOP
+
+L_ROW_NEXT:
+    neg_r = sub 0, curr_r
+    bit_r = and curr_r, neg_r
+    store r_slot+0, sub curr_r, bit_r as u64
+    jmp L_ROW_LOOP
+
+L_DONE:
+    final_res = load res_slot+0 as u64
+    return final_res
+
+@export sa_fenwick_2d_free(^ft: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add ft, Fenwick2D_data
+    data = load __addr+0 as ptr
+    !__addr
+    !data
+    !ft
+    return

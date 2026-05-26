@@ -1,0 +1,12 @@
+@import "../data_structures/splay_tree.sa"
+@test "splay"():
+L_ENTRY:
+
+
+    node = alloc 24
+    store node+0, 10 as u64
+    store node+8, 0 as ptr
+    store node+16, 0 as ptr
+    res = call @splay_rotate_right(^node)
+    !res
+    return

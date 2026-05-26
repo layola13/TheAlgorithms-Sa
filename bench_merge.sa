@@ -1,0 +1,78 @@
+@import "sa_std/time.sa"
+@import "sorting/merge_sort.sa"
+
+@fill_rec(data: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    val = sub n, i
+    store p+0, val as u64
+    one = 1 as u64
+    ni = add i, one
+    call @fill_rec(data, ni, n)
+    !eight
+    !off
+    !p
+    !val
+    !one
+    !ni
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@main() -> i32:
+L_ENTRY:
+    n = 100000 as u64
+    eight = 8 as u64
+    bytes = mul n, eight
+    data = alloc bytes
+    zero = 0 as u64
+    call @fill_rec(data, zero, n)
+    slice = stack_alloc 16
+    store slice+0, data as ptr
+    store slice+8, n as u64
+    start = call @sa_time_instant_ns()
+    call @sa_merge_sort(&slice)
+    end = call @sa_time_instant_ns()
+    first = load data+0 as u64
+    ok_first = eq first, 1
+    !first
+    br ok_first -> L_CHECK_LAST, L_FAIL
+L_CHECK_LAST:
+    one = 1 as u64
+    last_i = sub n, one
+    last_off = mul last_i, eight
+    last_p = ptr_add data, last_off
+    last = load last_p+0 as u64
+    ok_last = eq last, n
+    !one
+    !last_i
+    !last_off
+    !last_p
+    !last
+    br ok_last -> L_DONE, L_FAIL
+L_FAIL:
+    !data
+    return 255
+L_DONE:
+    diff = sub end, start
+    mill = 1000000 as u64
+    res = udiv diff, mill
+    res_i32 = zext res as i32
+    !data
+    !eight
+    !bytes
+    !zero
+    !start
+    !end
+    !diff
+    !mill
+    !res
+    !n
+    return res_i32

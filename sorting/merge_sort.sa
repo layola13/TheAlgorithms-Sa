@@ -1,0 +1,246 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@copy_segment_offset(dst: ptr, src: ptr, i: u64, end: u64, k: u64) -> void:
+L_ENTRY:
+    done = eq i, end
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    src_off = mul i, eight
+    src_p = ptr_add src, src_off
+    v = load src_p+0 as u64
+    dst_off = mul k, eight
+    dst_p = ptr_add dst, dst_off
+    store dst_p+0, v as u64
+    one = 1 as u64
+    ni = add i, one
+    nk = add k, one
+    call @copy_segment_offset(dst, src, ni, end, nk)
+    !eight
+    !src_off
+    !src_p
+    !v
+    !dst_off
+    !dst_p
+    !one
+    !ni
+    !nk
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@copy_segment_same(dst: ptr, src: ptr, i: u64, end: u64) -> void:
+L_ENTRY:
+    done = eq i, end
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    src_p = ptr_add src, off
+    v = load src_p+0 as u64
+    dst_p = ptr_add dst, off
+    store dst_p+0, v as u64
+    one = 1 as u64
+    ni = add i, one
+    call @copy_segment_same(dst, src, ni, end)
+    !eight
+    !off
+    !src_p
+    !v
+    !dst_p
+    !one
+    !ni
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@merge_segments(dst: ptr, src: ptr, i: u64, mid: u64, j: u64, right: u64, k: u64) -> void:
+L_ENTRY:
+    has_left = ult i, mid
+    has_right = ult j, right
+    both = and has_left, has_right
+    br both -> L_COMPARE, L_FINISH
+L_COMPARE:
+    eight = 8 as u64
+    i_off = mul i, eight
+    i_ptr = ptr_add src, i_off
+    i_val = load i_ptr+0 as u64
+    j_off = mul j, eight
+    j_ptr = ptr_add src, j_off
+    j_val = load j_ptr+0 as u64
+    k_off = mul k, eight
+    k_ptr = ptr_add dst, k_off
+    take_left = ule i_val, j_val
+    br take_left -> L_LEFT, L_RIGHT
+L_LEFT:
+    store k_ptr+0, i_val as u64
+    one = 1 as u64
+    ni = add i, one
+    nk = add k, one
+    call @merge_segments(dst, src, ni, mid, j, right, nk)
+    !eight
+    !i_off
+    !i_ptr
+    !i_val
+    !j_off
+    !j_ptr
+    !j_val
+    !k_off
+    !k_ptr
+    !take_left
+    !one
+    !ni
+    !nk
+    !has_left
+    !has_right
+    !both
+    return
+L_RIGHT:
+    store k_ptr+0, j_val as u64
+    one2 = 1 as u64
+    nj = add j, one2
+    nk2 = add k, one2
+    call @merge_segments(dst, src, i, mid, nj, right, nk2)
+    !eight
+    !i_off
+    !i_ptr
+    !i_val
+    !j_off
+    !j_ptr
+    !j_val
+    !k_off
+    !k_ptr
+    !take_left
+    !one2
+    !nj
+    !nk2
+    !has_left
+    !has_right
+    !both
+    return
+L_FINISH:
+    br has_left -> L_COPY_LEFT, L_CHECK_RIGHT
+L_COPY_LEFT:
+    call @copy_segment_offset(dst, src, i, mid, k)
+    !has_left
+    !has_right
+    !both
+    return
+L_CHECK_RIGHT:
+    br has_right -> L_COPY_RIGHT, L_DONE
+L_COPY_RIGHT:
+    call @copy_segment_offset(dst, src, j, right, k)
+    !has_left
+    !has_right
+    !both
+    return
+L_DONE:
+    !has_left
+    !has_right
+    !both
+    return
+
+@merge_pass(dst: ptr, src: ptr, start: u64, width: u64, n: u64) -> void:
+L_ENTRY:
+    done = uge start, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    mid = add start, width
+    mid_oob = uge mid, n
+    br mid_oob -> L_COPY_TAIL, L_RIGHT
+L_COPY_TAIL:
+    call @copy_segment_offset(dst, src, start, n, start)
+    !mid
+    !mid_oob
+    !done
+    return
+L_RIGHT:
+    two = 2 as u64
+    span = mul width, two
+    right_tmp = add start, span
+    right_slot = stack_alloc 8
+    right_oob = ugt right_tmp, n
+    br right_oob -> L_CLAMP, L_MERGE_FULL
+L_CLAMP:
+    store right_slot+0, n as u64
+    jmp L_MERGE
+L_MERGE_FULL:
+    store right_slot+0, right_tmp as u64
+    jmp L_MERGE
+L_MERGE:
+    right = load right_slot+0 as u64
+    call @merge_segments(dst, src, start, mid, mid, right, start)
+    next_start = add start, span
+    call @merge_pass(dst, src, next_start, width, n)
+    !mid
+    !mid_oob
+    !two
+    !span
+    !right_tmp
+    !right_oob
+    !right
+    !next_start
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@merge_sort_bottom_up(src: ptr, dst: ptr, width: u64, n: u64) -> ptr:
+L_ENTRY:
+    done = uge width, n
+    br done -> L_DONE, L_STEP
+L_STEP:
+    zero = 0 as u64
+    call @merge_pass(dst, src, zero, width, n)
+    two = 2 as u64
+    next_width = mul width, two
+    result = call @merge_sort_bottom_up(dst, src, next_width, n)
+    !zero
+    !two
+    !next_width
+    !done
+    return result
+L_DONE:
+    !done
+    return src
+
+@export sa_merge_sort(&slice: ptr) -> void:
+L_ENTRY:
+    len_addr = ptr_add slice, Slice_len
+    n = load len_addr+0 as u64
+    !len_addr
+    is_small = ule n, 1
+    br is_small -> L_DONE, L_START
+L_START:
+    ptr_addr = ptr_add slice, Slice_ptr
+    data = load ptr_addr+0 as ptr
+    !ptr_addr
+    eight = 8 as u64
+    bytes = mul n, eight
+    scratch = alloc bytes
+    one = 1 as u64
+    final_ptr = call @merge_sort_bottom_up(data, scratch, one, n)
+    is_data = eq final_ptr, data
+    br is_data -> L_CLEANUP, L_COPY_BACK
+L_COPY_BACK:
+    zero = 0 as u64
+    call @copy_segment_same(data, final_ptr, zero, n)
+    !zero
+    jmp L_CLEANUP
+L_CLEANUP:
+    !scratch
+    !final_ptr
+    !is_data
+    !one
+    !bytes
+    !eight
+    return
+L_DONE:
+    !is_small
+    return

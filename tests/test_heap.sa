@@ -1,0 +1,15 @@
+@import "../data_structures/heap.sa"
+@test "heap"():
+L_ENTRY:
+    h = call @sa_heap_new()
+    call @sa_heap_add(&h, 10)
+    call @sa_heap_add(&h, 20)
+    call @sa_heap_add(&h, 5)
+    v = call @sa_heap_pop(&h)
+    is_ok = eq v, 20
+    !v
+    br is_ok -> L_PASS, L_FAIL
+L_PASS:
+    return
+L_FAIL:
+    panic(802)

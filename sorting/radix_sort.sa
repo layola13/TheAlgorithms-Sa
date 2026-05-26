@@ -1,0 +1,250 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+
+@counting_sort_pass(data: ptr, output: ptr, count: ptr, n: u64, shift: u64) -> void:
+L_ENTRY:
+    // Reset count
+    zero = 0 as u64
+    call @reset_count_rec(count, zero)
+    
+    // Count occurrences
+    call @count_digits_rec(data, count, zero, n, shift)
+    
+    // Prefix sum
+    one = 1 as u64
+    c_zero = load count+0 as u64
+    call @prefix_sum_rec(count, one, c_zero)
+    
+    // Build output
+    nm1 = sub n, one
+    call @build_output_rec(data, output, count, nm1, shift)
+    
+    !zero
+    !one
+    !c_zero
+    !nm1
+    return
+
+@reset_count_rec(count: ptr, i: u64) -> void:
+L_ENTRY:
+    limit = 256 as u64
+    done = eq i, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add count, off
+    zero = 0 as u64
+    store p+0, zero as u64
+    ni = add i, 1
+    call @reset_count_rec(count, ni)
+    !limit
+    !done
+    !eight
+    !off
+    !p
+    !zero
+    !ni
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@count_digits_rec(data: ptr, count: ptr, i: u64, n: u64, shift: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    
+    digit = shr val, shift
+    mask = 255 as u64
+    digit = and digit, mask
+    
+    digit_off = mul digit, eight
+    cp = ptr_add count, digit_off
+    cv = load cp+0 as u64
+    nv = add cv, 1
+    store cp+0, nv as u64
+    
+    ni = add i, 1
+    call @count_digits_rec(data, count, ni, n, shift)
+    !eight
+    !off
+    !p
+    !val
+    !digit
+    !mask
+    !digit_off
+    !cp
+    !cv
+    !nv
+    !ni
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@prefix_sum_rec(count: ptr, i: u64, prev_v: u64) -> void:
+L_ENTRY:
+    limit = 256 as u64
+    done = eq i, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add count, off
+    cur_v = load p+0 as u64
+    nv = add cur_v, prev_v
+    store p+0, nv as u64
+    ni = add i, 1
+    call @prefix_sum_rec(count, ni, nv)
+    !limit
+    !done
+    !eight
+    !off
+    !p
+    !cur_v
+    !nv
+    !ni
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@build_output_rec(data: ptr, output: ptr, count: ptr, i: u64, shift: u64) -> void:
+L_ENTRY:
+    wrap_limit = 1000000000 as u64
+    is_neg = ugt i, wrap_limit
+    br is_neg -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    p = ptr_add data, off
+    val = load p+0 as u64
+    
+    digit = shr val, shift
+    mask = 255 as u64
+    digit = and digit, mask
+    
+    digit_off = mul digit, eight
+    cp = ptr_add count, digit_off
+    cv = load cp+0 as u64
+    idx = sub cv, 1
+    store cp+0, idx as u64
+    
+    out_off = mul idx, eight
+    dp = ptr_add output, out_off
+    store dp+0, val as u64
+    
+    ni = sub i, 1
+    call @build_output_rec(data, output, count, ni, shift)
+    !is_neg
+    !eight
+    !off
+    !p
+    !val
+    !digit
+    !mask
+    !digit_off
+    !cp
+    !cv
+    !idx
+    !out_off
+    !dp
+    !ni
+    return
+L_DONE:
+    !wrap_limit
+    !is_neg
+    return
+
+@export sa_radix_sort(&slice: ptr) -> void:
+L_ENTRY:
+    la = ptr_add slice, Slice_len
+    n = load la+0 as u64
+    !la
+    is_small = ule n, 1
+    br is_small -> L_RET, L_START
+L_START:
+    pa = ptr_add slice, Slice_ptr
+    data = load pa+0 as ptr
+    !pa
+    
+    eight = 8 as u64
+    out_b = mul n, eight
+    output = alloc out_b
+    count_b = mul 256, eight
+    count = alloc count_b
+    
+    // 8 passes for 64-bit integer (256 radix)
+    zero = 0 as u64
+    call @radix_pass_loop(data, output, count, n, zero)
+    
+    !output
+    !count
+    !eight
+    !out_b
+    !count_b
+    !zero
+L_RET:
+    !is_small
+    return
+
+@radix_pass_loop(data: ptr, output: ptr, count: ptr, n: u64, pass: u64) -> void:
+L_ENTRY:
+    limit = 8 as u64
+    done = eq pass, limit
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    shift = mul pass, eight
+    call @counting_sort_pass(data, output, count, n, shift)
+    // Copy output back to data for next pass
+    zero = 0 as u64
+    call @copy_segment_rec(data, output, zero, n)
+    
+    ni = add pass, 1
+    call @radix_pass_loop(data, output, count, n, ni)
+    !limit
+    !done
+    !eight
+    !shift
+    !zero
+    !ni
+    return
+L_DONE:
+    !limit
+    !done
+    return
+
+@copy_segment_rec(dst: ptr, src: ptr, i: u64, n: u64) -> void:
+L_ENTRY:
+    done = eq i, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    sp = ptr_add src, off
+    v = load sp+0 as u64
+    dp = ptr_add dst, off
+    store dp+0, v as u64
+    ni = add i, 1
+    call @copy_segment_rec(dst, src, ni, n)
+    !eight
+    !off
+    !sp
+    !v
+    !dp
+    !ni
+    !done
+    return
+L_DONE:
+    !done
+    return

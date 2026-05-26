@@ -1,0 +1,134 @@
+@import "sa_std/core/slice.sal"
+
+@partition_loop(&data: ptr, j: u64, hi: u64, i: u64, pivot_val: u64) -> u64:
+L_ENTRY:
+    done = eq j, hi
+    br done -> L_DONE, L_BODY
+L_BODY:
+    joff = mul j, 8
+    jp = ptr_add data, joff
+    vj = load jp+0 as u64
+    !joff
+    !jp
+    
+    is_lt = ult vj, pivot_val
+    br is_lt -> L_SWAP, L_NEXT
+L_SWAP:
+    ioff = mul i, 8
+    ip = ptr_add data, ioff
+    vi = load ip+0 as u64
+    !ioff
+    !ip
+    
+    joff = mul j, 8
+    jp = ptr_add data, joff
+    store jp+0, vi as u64
+    !joff
+    !jp
+    !vi
+    
+    ioff2 = mul i, 8
+    ip2 = ptr_add data, ioff2
+    store ip2+0, vj as u64
+    !ioff2
+    !ip2
+    !vj
+    !is_lt
+    
+    next_i = add i, 1
+    next_j = add j, 1
+    res_i = call @partition_loop(&data, next_j, hi, next_i, pivot_val)
+    !next_i
+    !next_j
+    !done
+    return res_i
+L_NEXT:
+    !vj
+    !is_lt
+    next_j = add j, 1
+    res_i = call @partition_loop(&data, next_j, hi, i, pivot_val)
+    !next_j
+    !done
+    return res_i
+L_DONE:
+    !done
+    return i
+
+@partition(&data: ptr, lo: u64, hi: u64) -> u64:
+L_ENTRY:
+    hioff = mul hi, 8
+    hip = ptr_add data, hioff
+    pivot_val = load hip+0 as u64
+    !hioff
+    !hip
+
+    i_out = call @partition_loop(&data, lo, hi, lo, pivot_val)
+    
+    ioff = mul i_out, 8
+    ip = ptr_add data, ioff
+    vi = load ip+0 as u64
+    
+    hioff = mul hi, 8
+    hip = ptr_add data, hioff
+    vh = load hip+0 as u64
+    
+    store ip+0, vh as u64
+    store hip+0, vi as u64
+    
+    !ioff
+    !ip
+    !vi
+    !hioff
+    !hip
+    !vh
+    !pivot_val
+    return i_out
+
+@_quick_sort(&data: ptr, lo: u64, hi: u64) -> void:
+L_ENTRY:
+    is_base = uge lo, hi
+    br is_base -> L_DONE, L_RECURSE
+L_RECURSE:
+    !is_base
+    p = call @partition(&data, lo, hi)
+    
+    has_left = ugt p, 0
+    br has_left -> L_LEFT, L_RIGHT_ONLY
+L_LEFT:
+    !has_left
+    p_minus_1 = sub p, 1
+    call @_quick_sort(&data, lo, p_minus_1)
+    !p_minus_1
+    jmp L_RIGHT
+L_RIGHT_ONLY:
+    !has_left
+    jmp L_RIGHT
+L_RIGHT:
+    p_plus_1 = add p, 1
+    call @_quick_sort(&data, p_plus_1, hi)
+    !p_plus_1
+    !p
+    return
+L_DONE:
+    !is_base
+    return
+
+@export sa_quick_sort(&slice: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add slice, Slice_len
+    n = load __addr+0 as u64
+    !__addr
+    is_small = ule n, 1
+    br is_small -> L_DONE, L_START
+L_START:
+    __addr = ptr_add slice, Slice_ptr
+    data = load __addr+0 as ptr
+    !__addr
+    
+    hi = sub n, 1
+    call @_quick_sort(&data, 0, hi)
+    !hi
+    !data
+L_DONE:
+    !n
+    return

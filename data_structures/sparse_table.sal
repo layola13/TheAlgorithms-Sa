@@ -1,0 +1,4 @@
+#def SparseTable_data = +0
+#def SparseTable_n = +8
+#def SparseTable_log_n = +16
+#def SparseTable_SIZE = 24

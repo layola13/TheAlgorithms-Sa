@@ -1,0 +1,58 @@
+@import "sa_std/binary_heap.sa"
+
+@export sa_heap_new() -> ^ptr:
+L_ENTRY:
+    heap = call @sa_binary_heap_new()
+    return heap
+
+@export sa_heap_free(^heap: ptr) -> void:
+L_ENTRY:
+    call @sa_binary_heap_free(^heap)
+    return
+
+@export sa_heap_len(&heap: ptr) -> u64:
+L_ENTRY:
+    len = call @sa_binary_heap_len(&heap)
+    !heap
+    return len
+
+@export sa_heap_is_empty(&heap: ptr) -> i32:
+L_ENTRY:
+    empty = call @sa_binary_heap_is_empty(&heap)
+    !heap
+    return empty
+
+@export sa_heap_clear(&heap: ptr) -> void:
+L_ENTRY:
+    call @sa_binary_heap_clear(&heap)
+    !heap
+    return
+
+@export sa_heap_add(&heap: ptr, value: u64) -> void:
+L_ENTRY:
+    call @sa_binary_heap_push(&heap, value)
+    !value
+    !heap
+    return
+
+@export sa_heap_peek(&heap: ptr) -> u64:
+L_ENTRY:
+    value = call @sa_binary_heap_peek(&heap)
+    !heap
+    return value
+
+@export sa_heap_pop(&heap: ptr) -> u64:
+L_ENTRY:
+    value_slot = stack_alloc 8
+    ok = call @sa_binary_heap_try_pop(&heap, &value_slot)
+    value = load value_slot+0 as u64
+    !heap
+    !ok
+    return value
+
+@export sa_heap_try_pop(&heap: ptr, &out_value_slot: ptr) -> i32:
+L_ENTRY:
+    ok = call @sa_binary_heap_try_pop(&heap, &out_value_slot)
+    !out_value_slot
+    !heap
+    return ok

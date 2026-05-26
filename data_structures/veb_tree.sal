@@ -1,0 +1,6 @@
+#def VEB_u = +0
+#def VEB_min = +8
+#def VEB_max = +16
+#def VEB_summary = +24
+#def VEB_clusters = +32
+#def VEB_SIZE = 40

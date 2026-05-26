@@ -1,0 +1,417 @@
+@import "sa_std/core/mem.sa"
+@import "sa_std/core/slice.sal"
+@import "lazy_segment_tree.sal"
+
+@lazy_seg_ceil_pow2_helper(v: u64, res: u64) -> u64:
+L_ENTRY:
+    done = uge res, v
+    br done -> L_DONE, L_STEP
+L_STEP:
+    next = add res, res
+    fr = call @lazy_seg_ceil_pow2_helper(v, next)
+    !done
+    !next
+    return fr
+L_DONE:
+    !done
+    return res
+
+@lazy_seg_ceil_pow2(v: u64) -> u64:
+L_ENTRY:
+    one = 1 as u64
+    res = call @lazy_seg_ceil_pow2_helper(v, one)
+    !one
+    return res
+
+@export sa_lazy_seg_new(&src: ptr) -> ^ptr:
+L_ENTRY:
+    n = load src+Slice_len as u64
+    sd = load src+Slice_ptr as ptr
+    cap = call @lazy_seg_ceil_pow2(n)
+    two = 2 as u64
+    tn = mul cap, two
+    eight = 8 as u64
+    nb = mul tn, eight
+    nodes = alloc nb
+    lazy = alloc nb
+    zero = 0 as u64
+    call @lazy_seg_init_nodes(&nodes, &lazy, zero, tn)
+    call @lazy_seg_copy_data(&nodes, &sd, zero, n, cap)
+    one3 = 1 as u64
+    cap_m1 = sub cap, one3
+    call @lazy_seg_build_nodes(&nodes, cap_m1, cap, zero)
+    tree = alloc LazySegTree_SIZE
+    store tree+LazySegTree_nodes, nodes as ptr
+    store tree+LazySegTree_lazy, lazy as ptr
+    store tree+LazySegTree_n, n as u64
+    !two
+    !eight
+    !nb
+    !zero
+    !one3
+    !cap_m1
+    !cap
+    return tree
+
+@lazy_seg_init_nodes(&nodes: ptr, &lazy: ptr, i: u64, tn: u64) -> void:
+L_ENTRY:
+    done = eq i, tn
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    off = mul i, eight
+    np = ptr_add nodes, off
+    lp = ptr_add lazy, off
+    zero = 0 as u64
+    store np+0, zero as u64
+    store lp+0, zero as u64
+    one = 1 as u64
+    ni = add i, one
+    call @lazy_seg_init_nodes(&nodes, &lazy, ni, tn)
+    !eight
+    !off
+    !np
+    !lp
+    !zero
+    !one
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@lazy_seg_copy_data(&nodes: ptr, &sd: ptr, j: u64, n: u64, cap: u64) -> void:
+L_ENTRY:
+    done = eq j, n
+    br done -> L_DONE, L_BODY
+L_BODY:
+    eight = 8 as u64
+    so = mul j, eight
+    sp = ptr_add sd, so
+    val = load sp+0 as u64
+    di = add cap, j
+    do = mul di, eight
+    np = ptr_add nodes, do
+    store np+0, val as u64
+    one = 1 as u64
+    nj = add j, one
+    call @lazy_seg_copy_data(&nodes, &sd, nj, n, cap)
+    !eight
+    !so
+    !sp
+    !val
+    !di
+    !do
+    !np
+    !one
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@lazy_seg_build_nodes(&nodes: ptr, k: u64, cap: u64, zero: u64) -> void:
+L_ENTRY:
+    done = eq k, zero
+    br done -> L_DONE, L_BODY
+L_BODY:
+    two = 2 as u64
+    one = 1 as u64
+    lc = mul k, two
+    rc = add lc, one
+    eight = 8 as u64
+    lco = mul lc, eight
+    rco = mul rc, eight
+    lcp = ptr_add nodes, lco
+    rcp = ptr_add nodes, rco
+    lv = load lcp+0 as u64
+    rv = load rcp+0 as u64
+    m = add lv, rv
+    ko = mul k, eight
+    kp = ptr_add nodes, ko
+    store kp+0, m as u64
+    nk = sub k, one
+    call @lazy_seg_build_nodes(&nodes, nk, cap, zero)
+    !two
+    !one
+    !lc
+    !rc
+    !eight
+    !lco
+    !rco
+    !lcp
+    !rcp
+    !lv
+    !rv
+    !m
+    !ko
+    !kp
+    !done
+    return
+L_DONE:
+    !done
+    return
+
+@lazy_seg_push(&tree: ptr, node: u64, l: u64, r: u64) -> void:
+L_ENTRY:
+    lazy_ptr = load tree+LazySegTree_lazy as ptr
+    eight = 8 as u64
+    off = mul node, eight
+    lzp = ptr_add lazy_ptr, off
+    lzv = load lzp+0 as u64
+    zero = 0 as u64
+    iz = eq lzv, zero
+    br iz -> L_ZERO_DONE, L_PUSH
+L_ZERO_DONE:
+    !lazy_ptr
+    !eight
+    !off
+    !lzv
+    !zero
+    !iz
+    return
+L_PUSH:
+    nodes_ptr = load tree+LazySegTree_nodes as ptr
+    np = ptr_add nodes_ptr, off
+    ran = sub r, l
+    one = 1 as u64
+    ran1 = add ran, one
+    av = mul lzv, ran1
+    cv = load np+0 as u64
+    nv = add cv, av
+    store np+0, nv as u64
+    nl = ult l, r
+    br nl -> L_PUSH_CHILDREN, L_CLEAR_LEAF
+L_PUSH_CHILDREN:
+    two = 2 as u64
+    lc = mul node, two
+    rc = add lc, one
+    lco = mul lc, eight
+    rco = mul rc, eight
+    lp = ptr_add lazy_ptr, lco
+    rp = ptr_add lazy_ptr, rco
+    lvl = load lp+0 as u64
+    nvl = add lvl, lzv
+    store lp+0, nvl as u64
+    lvr = load rp+0 as u64
+    nvr = add lvr, lzv
+    store rp+0, nvr as u64
+    store lzp+0, zero as u64
+    !two
+    !lc
+    !rc
+    !lco
+    !rco
+    !lp
+    !rp
+    !lvl
+    !nvl
+    !lvr
+    !nvr
+    !nodes_ptr
+    !ran
+    !one
+    !ran1
+    !av
+    !cv
+    !nv
+    !nl
+    !lazy_ptr
+    !eight
+    !off
+    !lzv
+    !zero
+    !iz
+    return
+L_CLEAR_LEAF:
+    store lzp+0, zero as u64
+    !nodes_ptr
+    !ran
+    !one
+    !ran1
+    !av
+    !cv
+    !nv
+    !nl
+    !lazy_ptr
+    !eight
+    !off
+    !lzv
+    !zero
+    !iz
+    return
+
+@lazy_seg_update_range(&tree: ptr, node: u64, nl: u64, nr: u64, ql: u64, qr: u64, val: u64) -> void:
+L_ENTRY:
+    call @lazy_seg_push(&tree, node, nl, nr)
+    o1 = ugt nl, qr
+    o2 = ult nr, ql
+    o = or o1, o2
+    br o -> L_DONE, L_CHECK_FULL
+L_CHECK_FULL:
+    f1 = uge nl, ql
+    f2 = ule nr, qr
+    fu = and f1, f2
+    br fu -> L_APPLY, L_RECURSE
+L_APPLY:
+    lp = load tree+LazySegTree_lazy as ptr
+    ei = 8 as u64
+    of = mul node, ei
+    lzp = ptr_add lp, of
+    store lzp+0, val as u64
+    call @lazy_seg_push(&tree, node, nl, nr)
+    !lp
+    !ei
+    !of
+    !o
+    !o1
+    !o2
+    !f1
+    !f2
+    !fu
+    return
+L_RECURSE:
+    mi = add nl, nr
+    two = 2 as u64
+    mi = udiv mi, two
+    lc = mul node, two
+    one = 1 as u64
+    rc = add lc, one
+    mp1 = add mi, one
+    call @lazy_seg_update_range(&tree, lc, nl, mi, ql, qr, val)
+    call @lazy_seg_update_range(&tree, rc, mp1, nr, ql, qr, val)
+    nps = load tree+LazySegTree_nodes as ptr
+    ei2 = 8 as u64
+    lo = mul lc, ei2
+    ro = mul rc, ei2
+    lp2 = ptr_add nps, lo
+    rp2 = ptr_add nps, ro
+    vlc = load lp2+0 as u64
+    vrc = load rp2+0 as u64
+    vn = add vlc, vrc
+    no = mul node, ei2
+    np2 = ptr_add nps, no
+    store np2+0, vn as u64
+    !mi
+    !two
+    !lc
+    !one
+    !rc
+    !mp1
+    !nps
+    !ei2
+    !lo
+    !ro
+    !vlc
+    !vrc
+    !vn
+    !no
+    !o
+    !o1
+    !o2
+    !f1
+    !f2
+    !fu
+    return
+L_DONE:
+    !o
+    !o1
+    !o2
+    return
+
+@lazy_seg_query_range(&tree: ptr, node: u64, nl: u64, nr: u64, ql: u64, qr: u64) -> u64:
+L_ENTRY:
+    call @lazy_seg_push(&tree, node, nl, nr)
+    o1 = ugt nl, qr
+    o2 = ult nr, ql
+    o = or o1, o2
+    br o -> L_RET_ZERO, L_CHECK_FULL
+L_RET_ZERO:
+    !o
+    !o1
+    !o2
+    return 0
+L_CHECK_FULL:
+    f1 = uge nl, ql
+    f2 = ule nr, qr
+    fu = and f1, f2
+    br fu -> L_RET_VAL, L_RECURSE
+L_RET_VAL:
+    nps = load tree+LazySegTree_nodes as ptr
+    ei = 8 as u64
+    of = mul node, ei
+    np = ptr_add nps, of
+    v = load np+0 as u64
+    !nps
+    !ei
+    !of
+    !o
+    !o1
+    !o2
+    !f1
+    !f2
+    !fu
+    return v
+L_RECURSE:
+    mi = add nl, nr
+    two = 2 as u64
+    mi = udiv mi, two
+    lc = mul node, two
+    one = 1 as u64
+    rc = add lc, one
+    mp1 = add mi, one
+    v1 = call @lazy_seg_query_range(&tree, lc, nl, mi, ql, qr)
+    v2 = call @lazy_seg_query_range(&tree, rc, mp1, nr, ql, qr)
+    res = add v1, v2
+    !mi
+    !two
+    !lc
+    !one
+    !rc
+    !mp1
+    !o
+    !o1
+    !o2
+    !f1
+    !f2
+    !fu
+    return res
+
+@export sa_lazy_seg_update(&tree: ptr, l: u64, r: u64, val: u64) -> void:
+L_ENTRY:
+    n = load tree+LazySegTree_n as u64
+    cap = call @lazy_seg_ceil_pow2(n)
+    one = 1 as u64
+    cm = sub cap, one
+    zero = 0 as u64
+    call @lazy_seg_update_range(&tree, one, zero, cm, l, r, val)
+    !n
+    !cap
+    !one
+    !cm
+    !zero
+    return
+
+@export sa_lazy_seg_query(&tree: ptr, l: u64, r: u64) -> u64:
+L_ENTRY:
+    n = load tree+LazySegTree_n as u64
+    cap = call @lazy_seg_ceil_pow2(n)
+    one = 1 as u64
+    cm = sub cap, one
+    zero = 0 as u64
+    res = call @lazy_seg_query_range(&tree, one, zero, cm, l, r)
+    !n
+    !cap
+    !one
+    !cm
+    !zero
+    return res
+
+@export sa_lazy_seg_free(^tree: ptr) -> void:
+L_ENTRY:
+    nodes = load tree+LazySegTree_nodes as ptr
+    lazy = load tree+LazySegTree_lazy as ptr
+    !nodes
+    !lazy
+    !tree
+    return

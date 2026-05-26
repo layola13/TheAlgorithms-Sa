@@ -1,0 +1,243 @@
+@import "sa_std/vec.sal"
+@import "sa_std/vec.sa"
+@import "union_find.sal"
+
+@uf_parents(&uf: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add uf, UF_parents
+    parents = load __addr+0 as ptr
+    !__addr
+    return parents
+
+@uf_sizes(&uf: ptr) -> ptr:
+L_ENTRY:
+    __addr = ptr_add uf, UF_sizes
+    sizes = load __addr+0 as ptr
+    !__addr
+    return sizes
+
+@uf_vec_get(&vec: ptr, index: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add vec, Vec_ptr
+    base = load __addr+0 as ptr
+    !__addr
+    off = mul index, 8
+    ip = ptr_add base, off
+    value = load ip+0 as u64
+    !off
+    !ip
+    !base
+    return value
+
+@uf_vec_set(&vec: ptr, index: u64, value: u64) -> void:
+L_ENTRY:
+    __addr = ptr_add vec, Vec_ptr
+    base = load __addr+0 as ptr
+    !__addr
+    off = mul index, 8
+    ip = ptr_add base, off
+    store ip+0, value as u64
+    !off
+    !ip
+    !base
+    return
+
+@export sa_uf_new() -> ^ptr:
+L_ENTRY:
+    uf = alloc UF_SIZE
+    parents = call @sa_vec_new()
+    sizes = call @sa_vec_new()
+    __addr2 = ptr_add uf, UF_parents
+    store __addr2+0, parents as ptr
+    !__addr2
+    __addr2 = ptr_add uf, UF_sizes
+    store __addr2+0, sizes as ptr
+    !__addr2
+    __addr2 = ptr_add uf, UF_count
+    store __addr2+0, 0 as u64
+    !__addr2
+    __addr2 = ptr_add uf, UF_len
+    store __addr2+0, 0 as u64
+    !__addr2
+    return uf
+
+@export sa_uf_free(^uf: ptr) -> void:
+L_ENTRY:
+    __addr = ptr_add uf, UF_parents
+    parents = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add uf, UF_sizes
+    sizes = load __addr+0 as ptr
+    !__addr
+    call @sa_vec_free(^parents)
+    call @sa_vec_free(^sizes)
+    !uf
+    return
+
+@export sa_uf_count(&uf: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add uf, UF_count
+    count = load __addr+0 as u64
+    !__addr
+    return count
+
+@export sa_uf_len(&uf: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add uf, UF_len
+    len = load __addr+0 as u64
+    !__addr
+    return len
+
+@export sa_uf_make_set(&uf: ptr) -> u64:
+L_ENTRY:
+    __addr = ptr_add uf, UF_parents
+    parents = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add uf, UF_sizes
+    sizes = load __addr+0 as ptr
+    !__addr
+    __addr = ptr_add uf, UF_len
+    len = load __addr+0 as u64
+    !__addr
+    parents_new = call @sa_vec_push(^parents, len, 8)
+    sizes_new = call @sa_vec_push(^sizes, 1, 8)
+    next_len = add len, 1
+    __addr = ptr_add uf, UF_count
+    count = load __addr+0 as u64
+    !__addr
+    next_count = add count, 1
+    __addr2 = ptr_add uf, UF_parents
+    store __addr2+0, parents_new as ptr
+    !__addr2
+    __addr2 = ptr_add uf, UF_sizes
+    store __addr2+0, sizes_new as ptr
+    !__addr2
+    __addr2 = ptr_add uf, UF_len
+    store __addr2+0, next_len as u64
+    !__addr2
+    __addr2 = ptr_add uf, UF_count
+    store __addr2+0, next_count as u64
+    !__addr2
+    !next_len
+    !next_count
+    return len
+
+@uf_find_root(&uf: ptr, node: u64) -> u64:
+L_ENTRY:
+    parents = call @uf_parents(&uf)
+    parent = call @uf_vec_get(&parents, node)
+    is_root = eq parent, node
+    br is_root -> L_ROOT, L_RECURSE
+
+L_RECURSE:
+    root = call @uf_find_root(&uf, parent)
+    parents2 = call @uf_parents(&uf)
+    call @uf_vec_set(&parents2, node, root)
+    !parent
+    !is_root
+    !parents
+    !parents2
+    return root
+
+L_ROOT:
+    !parent
+    !is_root
+    !parents
+    return node
+
+@export sa_uf_find(&uf: ptr, node: u64) -> u64:
+L_ENTRY:
+    __addr = ptr_add uf, UF_len
+    len = load __addr+0 as u64
+    !__addr
+    in_range = ult node, len
+    br in_range -> L_FIND_OK, L_FIND_OOB
+
+L_FIND_OK:
+    root = call @uf_find_root(&uf, node)
+    !in_range
+    !len
+    return root
+
+L_FIND_OOB:
+    !in_range
+    !len
+    return 0
+
+@export sa_uf_same_set(&uf: ptr, a: u64, b: u64) -> i32:
+L_ENTRY:
+    ra = call @sa_uf_find(&uf, a)
+    rb = call @sa_uf_find(&uf, b)
+    same = eq ra, rb
+    res = zext same as i32
+    !ra
+    !rb
+    !same
+    return res
+
+@export sa_uf_union(&uf: ptr, a: u64, b: u64) -> i32:
+L_ENTRY:
+    ra = call @sa_uf_find(&uf, a)
+    rb = call @sa_uf_find(&uf, b)
+    same = eq ra, rb
+    br same -> L_SAME, L_MERGE
+
+L_MERGE:
+    parents = call @uf_parents(&uf)
+    sizes = call @uf_sizes(&uf)
+    size_a = call @uf_vec_get(&sizes, ra)
+    size_b = call @uf_vec_get(&sizes, rb)
+    a_smaller = ult size_a, size_b
+    br a_smaller -> L_ATTACH_A, L_ATTACH_B
+
+L_ATTACH_A:
+    call @uf_vec_set(&parents, ra, rb)
+    merged_size = add size_a, size_b
+    call @uf_vec_set(&sizes, rb, merged_size)
+    __addr = ptr_add uf, UF_count
+    count = load __addr+0 as u64
+    !__addr
+    next_count = sub count, 1
+    __addr2 = ptr_add uf, UF_count
+    store __addr2+0, next_count as u64
+    !__addr2
+    !ra
+    !rb
+    !same
+    !parents
+    !sizes
+    !size_a
+    !size_b
+    !a_smaller
+    !merged_size
+    !next_count
+    return 1
+
+L_ATTACH_B:
+    call @uf_vec_set(&parents, rb, ra)
+    merged_size = add size_a, size_b
+    call @uf_vec_set(&sizes, ra, merged_size)
+    __addr = ptr_add uf, UF_count
+    count = load __addr+0 as u64
+    !__addr
+    next_count = sub count, 1
+    __addr2 = ptr_add uf, UF_count
+    store __addr2+0, next_count as u64
+    !__addr2
+    !ra
+    !rb
+    !same
+    !parents
+    !sizes
+    !size_a
+    !size_b
+    !a_smaller
+    !merged_size
+    !next_count
+    return 1
+
+L_SAME:
+    !ra
+    !rb
+    !same
+    return 0
