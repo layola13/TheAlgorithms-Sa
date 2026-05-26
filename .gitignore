@@ -4,3 +4,7 @@ bin/
 *.wasm
 *.o
 *.bc
+*.so
+main
+bench_bubble_exe
+bench_merge_exe
