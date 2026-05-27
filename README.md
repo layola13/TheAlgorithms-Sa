@@ -58,8 +58,8 @@ Interpretation notes:
 
 Summary from this run:
 
-- Compilation: Sa leads 35 rows, Rust leads 2 rows, 0 rows are not comparable.
-- Runtime: Sa leads 27 rows, Rust leads 9 rows, 0 rows are not comparable.
+- Compilation: Sa leads 37 rows, Rust leads 0 rows, 0 rows are not comparable.
+- Runtime: Sa leads 31 rows, Rust leads 6 rows, 0 rows are not comparable.
 - Rust still wins some runtime rows because tiny smoke workloads are sensitive to process/runtime noise, some Rust implementations use mature standard-library or optimized generic code, and several Sa implementations remain simple coverage-oriented versions rather than fully tuned algorithms.
 
 ## Implementation Coverage
@@ -114,87 +114,85 @@ Summary from this run:
 
 | Algorithm | Category | Workload | Fairness | SA compile ms | Rust compile ms | Result | Status |
 | :--- | :--- | :--- | :--- | ---: | ---: | :--- | :--- |
-| avl_tree | Data Structure | generated | canonical | 154.6 | 228.8 | Sa Lead (1.5x) | ok |
-| b_tree | Data Structure | generated | canonical | 226.5 | 294.7 | Sa Lead (1.3x) | ok |
-| binary_search_tree | Data Structure | dedicated | specialized | 125.2 | 165.9 | Sa Lead (1.3x) | ok |
-| bloom_filter | Data Structure | generated | canonical | 159.4 | 239.5 | Sa Lead (1.5x) | ok |
-| count_min_sketch | Data Structure | generated | canonical | 111.8 | 228.3 | Sa Lead (2.0x) | ok |
-| fenwick_tree | Data Structure | generated | canonical | 139.3 | 208.3 | Sa Lead (1.5x) | ok |
-| floyds_algorithm | Data Structure | generated | canonical | 166.4 | 175.4 | Sa Lead (1.1x) | ok |
-| hash_table | Data Structure | generated | canonical | 150.0 | 296.2 | Sa Lead (2.0x) | ok |
-| heap | Data Structure | generated | canonical | 150.4 | 203.7 | Sa Lead (1.4x) | ok |
-| lazy_segment_tree | Data Structure | generated | canonical | 125.6 | 207.1 | Sa Lead (1.6x) | ok |
-| linked_list | Data Structure | generated | canonical | 125.8 | 163.4 | Sa Lead (1.3x) | ok |
-| queue | Data Structure | generated | canonical | 138.8 | 163.9 | Sa Lead (1.2x) | ok |
-| rb_tree | Data Structure | generated | canonical | 116.7 | 178.6 | Sa Lead (1.5x) | ok |
-| skip_list | Data Structure | generated | canonical | 112.0 | 225.2 | Sa Lead (2.0x) | ok |
-| stack_using_singly_linked_list | Data Structure | generated | canonical | 147.1 | 172.6 | Sa Lead (1.2x) | ok |
-| treap | Data Structure | generated | canonical | 164.8 | 221.6 | Sa Lead (1.3x) | ok |
-| trie | Data Structure | generated | canonical | 118.2 | 338.6 | Sa Lead (2.9x) | ok |
-| union_find | Data Structure | generated | canonical | 163.0 | 376.9 | Sa Lead (2.3x) | ok |
-| veb_tree | Data Structure | generated | canonical | 157.9 | 211.8 | Sa Lead (1.3x) | ok |
-| binary_search | Search | dedicated | specialized | 136.7 | 232.7 | Sa Lead (1.7x) | ok |
-| exponential_search | Search | generated | canonical | 133.7 | 135.4 | Sa Lead (1.0x) | ok |
-| fibonacci_search | Search | generated | canonical | 119.4 | 168.9 | Sa Lead (1.4x) | ok |
-| interpolation_search | Search | generated | canonical | 138.3 | 165.0 | Sa Lead (1.2x) | ok |
-| jump_search | Search | generated | canonical | 145.2 | 135.1 | Rust Lead (1.1x) | ok |
-| linear_search | Search | dedicated | specialized | 128.0 | 186.3 | Sa Lead (1.5x) | ok |
-| moore_voting | Search | generated | canonical | 113.3 | 178.1 | Sa Lead (1.6x) | ok |
-| quick_select | Search | generated | canonical | 117.8 | 183.5 | Sa Lead (1.6x) | ok |
-| ternary_search | Search | generated | canonical | 134.1 | 154.9 | Sa Lead (1.2x) | ok |
-| bubble_sort | Sort | dedicated | specialized | 132.5 | 195.9 | Sa Lead (1.5x) | ok |
-| counting_sort | Sort | generated | canonical | 107.6 | 189.5 | Sa Lead (1.8x) | ok |
-| heap_sort | Sort | generated | canonical | 100.2 | 140.2 | Sa Lead (1.4x) | ok |
-| insertion_sort | Sort | generated | canonical | 123.5 | 170.8 | Sa Lead (1.4x) | ok |
-| merge_sort | Sort | dedicated | specialized | 152.4 | 241.6 | Sa Lead (1.6x) | ok |
-| quick_sort | Sort | generated | canonical | 106.1 | 161.3 | Sa Lead (1.5x) | ok |
-| radix_sort | Sort | generated | canonical | 129.3 | 227.5 | Sa Lead (1.8x) | ok |
-| selection_sort | Sort | generated | canonical | 102.3 | 162.9 | Sa Lead (1.6x) | ok |
-| merge_sort_std | Sort | bench_sorting | specialized | 148.5 | 270.5 | Sa Lead (1.8x) | ok |
+| avl_tree | Data Structure | generated | canonical | 123.3 | 207.5 | Sa Lead (1.7x) | ok |
+| b_tree | Data Structure | generated | canonical | 122.7 | 290.5 | Sa Lead (2.4x) | ok |
+| binary_search_tree | Data Structure | dedicated | specialized | 146.1 | 170.9 | Sa Lead (1.2x) | ok |
+| bloom_filter | Data Structure | generated | canonical | 174.8 | 255.1 | Sa Lead (1.5x) | ok |
+| count_min_sketch | Data Structure | generated | canonical | 118.9 | 225.3 | Sa Lead (1.9x) | ok |
+| fenwick_tree | Data Structure | generated | canonical | 105.9 | 187.8 | Sa Lead (1.8x) | ok |
+| floyds_algorithm | Data Structure | generated | canonical | 149.3 | 186.7 | Sa Lead (1.3x) | ok |
+| hash_table | Data Structure | generated | canonical | 137.9 | 280.4 | Sa Lead (2.0x) | ok |
+| heap | Data Structure | generated | canonical | 137.5 | 184.1 | Sa Lead (1.3x) | ok |
+| lazy_segment_tree | Data Structure | generated | canonical | 134.6 | 201.7 | Sa Lead (1.5x) | ok |
+| linked_list | Data Structure | generated | canonical | 133.0 | 180.0 | Sa Lead (1.4x) | ok |
+| queue | Data Structure | generated | canonical | 121.8 | 151.7 | Sa Lead (1.2x) | ok |
+| rb_tree | Data Structure | generated | canonical | 118.1 | 197.4 | Sa Lead (1.7x) | ok |
+| skip_list | Data Structure | generated | canonical | 105.8 | 243.9 | Sa Lead (2.3x) | ok |
+| stack_using_singly_linked_list | Data Structure | generated | canonical | 126.7 | 154.6 | Sa Lead (1.2x) | ok |
+| treap | Data Structure | generated | canonical | 130.5 | 198.0 | Sa Lead (1.5x) | ok |
+| trie | Data Structure | generated | canonical | 114.7 | 294.3 | Sa Lead (2.6x) | ok |
+| union_find | Data Structure | generated | canonical | 154.7 | 302.5 | Sa Lead (2.0x) | ok |
+| veb_tree | Data Structure | generated | canonical | 120.7 | 211.8 | Sa Lead (1.8x) | ok |
+| binary_search | Search | dedicated | specialized | 121.8 | 200.9 | Sa Lead (1.6x) | ok |
+| exponential_search | Search | generated | canonical | 151.3 | 158.4 | Sa Lead (1.0x) | ok |
+| fibonacci_search | Search | generated | canonical | 109.5 | 131.3 | Sa Lead (1.2x) | ok |
+| interpolation_search | Search | generated | canonical | 114.3 | 181.7 | Sa Lead (1.6x) | ok |
+| jump_search | Search | generated | canonical | 112.7 | 130.6 | Sa Lead (1.2x) | ok |
+| linear_search | Search | dedicated | specialized | 134.7 | 181.4 | Sa Lead (1.3x) | ok |
+| moore_voting | Search | generated | canonical | 130.2 | 157.2 | Sa Lead (1.2x) | ok |
+| quick_select | Search | generated | canonical | 138.1 | 184.5 | Sa Lead (1.3x) | ok |
+| ternary_search | Search | generated | canonical | 138.6 | 183.4 | Sa Lead (1.3x) | ok |
+| bubble_sort | Sort | dedicated | specialized | 137.0 | 191.6 | Sa Lead (1.4x) | ok |
+| counting_sort | Sort | generated | canonical | 104.1 | 178.2 | Sa Lead (1.7x) | ok |
+| heap_sort | Sort | generated | canonical | 111.1 | 152.0 | Sa Lead (1.4x) | ok |
+| insertion_sort | Sort | generated | canonical | 114.8 | 132.4 | Sa Lead (1.2x) | ok |
+| merge_sort | Sort | dedicated | specialized | 173.8 | 230.3 | Sa Lead (1.3x) | ok |
+| quick_sort | Sort | generated | canonical | 110.3 | 189.4 | Sa Lead (1.7x) | ok |
+| radix_sort | Sort | generated | canonical | 135.7 | 210.6 | Sa Lead (1.6x) | ok |
+| selection_sort | Sort | generated | canonical | 114.3 | 150.2 | Sa Lead (1.3x) | ok |
+| merge_sort_std | Sort | bench_sorting | specialized | 154.5 | 287.3 | Sa Lead (1.9x) | ok |
 
 ## Full Runtime Matrix
 
 | Algorithm | Category | Workload | Fairness | SA runtime ms | Rust runtime ms | Result | Status |
 | :--- | :--- | :--- | :--- | ---: | ---: | :--- | :--- |
-| avl_tree | Data Structure | generated | canonical | 1.5 | 1.9 | Sa Lead (1.3x) | ok |
-| b_tree | Data Structure | generated | canonical | 1.7 | 1.4 | Rust Lead (1.2x) | ok |
-| binary_search_tree | Data Structure | dedicated | specialized | 2.0 | 43.4 | Sa Lead (21.2x) | ok |
-| bloom_filter | Data Structure | generated | canonical | 1.6 | 1.7 | Sa Lead (1.1x) | ok |
-| count_min_sketch | Data Structure | generated | canonical | 1.6 | 2.0 | Sa Lead (1.3x) | ok |
-| fenwick_tree | Data Structure | generated | canonical | 9.7 | 1.8 | Rust Lead (5.2x) | ok |
-| floyds_algorithm | Data Structure | generated | canonical | 1.2 | 1.7 | Sa Lead (1.5x) | ok |
-| hash_table | Data Structure | generated | canonical | 1.1 | 1.8 | Sa Lead (1.7x) | ok |
-| heap | Data Structure | generated | canonical | 0.9 | 1.7 | Sa Lead (1.8x) | ok |
-| lazy_segment_tree | Data Structure | generated | canonical | 3.0 | 1.4 | Rust Lead (2.1x) | ok |
-| linked_list | Data Structure | generated | canonical | 1.1 | 1.5 | Sa Lead (1.4x) | ok |
-| queue | Data Structure | generated | canonical | 1.2 | 1.4 | Sa Lead (1.2x) | ok |
-| rb_tree | Data Structure | generated | canonical | 1.2 | 1.9 | Sa Lead (1.7x) | ok |
-| skip_list | Data Structure | generated | canonical | 1.8 | 1.8 | Sa Lead (1.0x) | ok |
-| stack_using_singly_linked_list | Data Structure | generated | canonical | 1.2 | 1.7 | Sa Lead (1.4x) | ok |
-| treap | Data Structure | generated | canonical | 1.8 | 1.4 | Rust Lead (1.3x) | ok |
-| trie | Data Structure | generated | canonical | 1.3 | 1.9 | Sa Lead (1.5x) | ok |
-| union_find | Data Structure | generated | canonical | 1.8 | 1.8 | Rust Lead (1.0x) | ok |
-| veb_tree | Data Structure | generated | canonical | 1.6 | 2.1 | Sa Lead (1.3x) | ok |
-| binary_search | Search | dedicated | specialized | 1.5 | 31.3 | Sa Lead (20.2x) | ok |
-| exponential_search | Search | generated | canonical | 1.5 | 2.6 | Sa Lead (1.7x) | ok |
-| fibonacci_search | Search | generated | canonical | 1.4 | 1.4 | Sa Lead (1.1x) | ok |
-| interpolation_search | Search | generated | canonical | 1.0 | 1.6 | Sa Lead (1.5x) | ok |
-| jump_search | Search | generated | canonical | 1.4 | 1.5 | Sa Lead (1.1x) | ok |
-| linear_search | Search | dedicated | specialized | 272.2 | 265.7 | Rust Lead (1.0x) | ok |
-| moore_voting | Search | generated | canonical | 1.2 | 2.9 | Sa Lead (2.4x) | ok |
-| quick_select | Search | generated | canonical | 1.2 | 1.9 | Sa Lead (1.6x) | ok |
-| ternary_search | Search | generated | canonical | 1.3 | 1.4 | Sa Lead (1.1x) | ok |
-| bubble_sort | Sort | dedicated | specialized | 1.5 | 6.7 | Sa Lead (4.4x) | ok |
-| counting_sort | Sort | generated | canonical | 1.2 | 1.3 | Sa Lead (1.1x) | ok |
-| heap_sort | Sort | generated | canonical | 1.2 | 1.6 | Sa Lead (1.3x) | ok |
-| insertion_sort | Sort | generated | canonical | 1.3 | 2.0 | Sa Lead (1.5x) | ok |
-| merge_sort | Sort | dedicated | specialized | 4.4 | 14.0 | Sa Lead (3.2x) | ok |
-| quick_sort | Sort | generated | canonical | 1.2 | 1.5 | Sa Lead (1.3x) | ok |
-| radix_sort | Sort | generated | canonical | 1.7 | 1.6 | Rust Lead (1.1x) | ok |
-| selection_sort | Sort | generated | canonical | 1.5 | 1.4 | Rust Lead (1.1x) | ok |
-| merge_sort_std | Sort | bench_sorting | specialized | 5.1 | 2.8 | Rust Lead (1.8x) | ok |
-
-
+| avl_tree | Data Structure | generated | canonical | 1.5 | 1.7 | Sa Lead (1.2x) | ok |
+| b_tree | Data Structure | generated | canonical | 1.2 | 1.3 | Sa Lead (1.1x) | ok |
+| binary_search_tree | Data Structure | dedicated | specialized | 2.1 | 41.8 | Sa Lead (19.9x) | ok |
+| bloom_filter | Data Structure | generated | canonical | 1.6 | 1.9 | Sa Lead (1.2x) | ok |
+| count_min_sketch | Data Structure | generated | canonical | 1.3 | 1.4 | Sa Lead (1.1x) | ok |
+| fenwick_tree | Data Structure | generated | canonical | 1.1 | 1.4 | Sa Lead (1.2x) | ok |
+| floyds_algorithm | Data Structure | generated | canonical | 1.5 | 1.5 | Rust Lead (1.0x) | ok |
+| hash_table | Data Structure | generated | canonical | 1.6 | 1.7 | Sa Lead (1.1x) | ok |
+| heap | Data Structure | generated | canonical | 1.3 | 1.9 | Sa Lead (1.4x) | ok |
+| lazy_segment_tree | Data Structure | generated | canonical | 1.1 | 1.4 | Sa Lead (1.3x) | ok |
+| linked_list | Data Structure | generated | canonical | 1.3 | 1.9 | Sa Lead (1.5x) | ok |
+| queue | Data Structure | generated | canonical | 1.1 | 2.0 | Sa Lead (1.7x) | ok |
+| rb_tree | Data Structure | generated | canonical | 1.4 | 1.7 | Sa Lead (1.2x) | ok |
+| skip_list | Data Structure | generated | canonical | 1.2 | 2.0 | Sa Lead (1.6x) | ok |
+| stack_using_singly_linked_list | Data Structure | generated | canonical | 1.1 | 1.7 | Sa Lead (1.6x) | ok |
+| treap | Data Structure | generated | canonical | 1.1 | 2.0 | Sa Lead (1.8x) | ok |
+| trie | Data Structure | generated | canonical | 1.5 | 1.9 | Sa Lead (1.3x) | ok |
+| union_find | Data Structure | generated | canonical | 1.2 | 1.7 | Sa Lead (1.4x) | ok |
+| veb_tree | Data Structure | generated | canonical | 1.3 | 1.7 | Sa Lead (1.3x) | ok |
+| binary_search | Search | dedicated | specialized | 1.5 | 45.2 | Sa Lead (30.2x) | ok |
+| exponential_search | Search | generated | canonical | 1.7 | 1.8 | Sa Lead (1.0x) | ok |
+| fibonacci_search | Search | generated | canonical | 1.5 | 1.4 | Rust Lead (1.1x) | ok |
+| interpolation_search | Search | generated | canonical | 1.4 | 1.5 | Sa Lead (1.1x) | ok |
+| jump_search | Search | generated | canonical | 1.2 | 1.8 | Sa Lead (1.4x) | ok |
+| linear_search | Search | dedicated | specialized | 285.5 | 278.0 | Rust Lead (1.0x) | ok |
+| moore_voting | Search | generated | canonical | 1.1 | 1.5 | Sa Lead (1.3x) | ok |
+| quick_select | Search | generated | canonical | 1.3 | 1.9 | Sa Lead (1.5x) | ok |
+| ternary_search | Search | generated | canonical | 1.4 | 2.2 | Sa Lead (1.5x) | ok |
+| bubble_sort | Sort | dedicated | specialized | 1.8 | 3.3 | Sa Lead (1.8x) | ok |
+| counting_sort | Sort | generated | canonical | 1.5 | 1.4 | Rust Lead (1.1x) | ok |
+| heap_sort | Sort | generated | canonical | 1.8 | 4.7 | Sa Lead (2.5x) | ok |
+| insertion_sort | Sort | generated | canonical | 1.2 | 5.2 | Sa Lead (4.3x) | ok |
+| merge_sort | Sort | dedicated | specialized | 4.5 | 14.0 | Sa Lead (3.1x) | ok |
+| quick_sort | Sort | generated | canonical | 1.4 | 1.9 | Sa Lead (1.4x) | ok |
+| radix_sort | Sort | generated | canonical | 1.4 | 1.9 | Sa Lead (1.3x) | ok |
+| selection_sort | Sort | generated | canonical | 1.4 | 1.4 | Rust Lead (1.0x) | ok |
+| merge_sort_std | Sort | bench_sorting | specialized | 5.9 | 2.5 | Rust Lead (2.3x) | ok |
 
 ### Sa Compiler Improvement Plan
 
@@ -211,7 +209,7 @@ The following concrete improvements have contributed to Sa's current performance
 - **Allocation/free semantics**: many current `free` functions only release ownership in Sa's checker sense. A compiler/runtime-backed deallocation primitive, plus escape analysis for short-lived allocations, would improve data-structure benchmarks with heap-heavy setup.
 - **Incremental import cache**: every generated benchmark rebuild reparses and reverifies common imports. A content-addressed cache for flattened/verified modules would cut repeated compile times and should let Sa widen the compile-time lead beyond Rust on multi-file workloads.
 
-With reachability pruning, native LLVM IR optimization, stronger inlining, and direct tail-recursive return lowering applied, Sa leads 35 of 37 compile rows and 27 of 37 runtime rows in this local matrix. The remaining compile-time loss is `insertion_sort`, which is likely measurement noise plus backend startup cost rather than an algorithmic compile bottleneck. To catch or pass Rust on the remaining runtime rows, the highest-return compiler work is: Sa-level helper inlining first, loop canonicalization second, and richer address lowering third. Those target the exact overheads observed in the rows where Rust still wins.
+With reachability pruning, native LLVM IR optimization, stronger inlining, and direct tail-recursive return lowering applied, Sa leads 37 of 37 compile rows and 31 of 37 runtime rows in this local matrix. To catch or pass Rust on the remaining runtime rows, the highest-return compiler work is: Sa-level helper inlining first, loop canonicalization second, and richer address lowering third. Those target the exact overheads observed in the rows where Rust still wins.
 
 ## 📂 Directory Structure
 - `Sa/data_structures/`: Core implementations (`.sa`) and memory layouts (`.sal`).
